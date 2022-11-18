@@ -2,12 +2,19 @@
 
 LightShader::LightShader(ID3D11Device* device, HWND hwnd) : BaseShader(device, hwnd)
 {
-	initShader(L"light_vs.cso", L"light_ps.cso");
+	initShader(L"lighting_vs.cso", L"lighting_ps.cso");
 }
 
 
 LightShader::~LightShader()
 {
+	// Release the matrix constant buffer.
+	if (matrixBuffer)
+	{
+		matrixBuffer->Release();
+		matrixBuffer = 0;
+	}
+
 	// Release the layout.
 	if (layout)
 	{
@@ -15,14 +22,17 @@ LightShader::~LightShader()
 		layout = 0;
 	}
 
-	//Release base shader components
-	BaseShader::~BaseShader();
+	// Release the light constant buffer.
+	if (lightBuffer)
+	{
+		lightBuffer->Release();
+		lightBuffer = 0;
+	}
 }
 
 void LightShader::initShader(const wchar_t* vsFilename, const wchar_t* psFilename)
 {
 	D3D11_BUFFER_DESC matrixBufferDesc;
-	D3D11_SAMPLER_DESC samplerDesc;
 	D3D11_BUFFER_DESC lightBufferDesc;
 
 	// Load (+ compile) shader files
@@ -36,19 +46,7 @@ void LightShader::initShader(const wchar_t* vsFilename, const wchar_t* psFilenam
 	matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	matrixBufferDesc.MiscFlags = 0;
 	matrixBufferDesc.StructureByteStride = 0;
-	renderer->CreateBuffer(&matrixBufferDesc, NULL, matrixBuffer.ReleaseAndGetAddressOf());
-
-	// Create a texture sampler state description.
-	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 1;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	renderer->CreateSamplerState(&samplerDesc, sampleState.ReleaseAndGetAddressOf());
+	renderer->CreateBuffer(&matrixBufferDesc, NULL, &matrixBuffer);
 
 	// Setup light buffer
 	// Setup the description of the light dynamic constant buffer that is in the pixel shader.
@@ -59,17 +57,16 @@ void LightShader::initShader(const wchar_t* vsFilename, const wchar_t* psFilenam
 	lightBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	lightBufferDesc.MiscFlags = 0;
 	lightBufferDesc.StructureByteStride = 0;
-	renderer->CreateBuffer(&lightBufferDesc, NULL, lightBuffer.ReleaseAndGetAddressOf());
-
+	renderer->CreateBuffer(&lightBufferDesc, NULL, &lightBuffer);
 }
 
 
-void LightShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, ID3D11ShaderResourceView* texture, Light* light)
+void LightShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& worldMatrix, const XMMATRIX& viewMatrix, const XMMATRIX& projectionMatrix, Light* light)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	MatrixBufferType* dataPtr;
-	
+
 	XMMATRIX tworld, tview, tproj;
 
 
@@ -77,26 +74,23 @@ void LightShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const 
 	tworld = XMMatrixTranspose(worldMatrix);
 	tview = XMMatrixTranspose(viewMatrix);
 	tproj = XMMatrixTranspose(projectionMatrix);
-	result = deviceContext->Map(matrixBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	result = deviceContext->Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	dataPtr = (MatrixBufferType*)mappedResource.pData;
 	dataPtr->world = tworld;// worldMatrix;
 	dataPtr->view = tview;
 	dataPtr->projection = tproj;
-	deviceContext->Unmap(matrixBuffer.Get(), 0);
-	deviceContext->VSSetConstantBuffers(0, 1, matrixBuffer.GetAddressOf());
+	deviceContext->Unmap(matrixBuffer, 0);
+	deviceContext->VSSetConstantBuffers(0, 1, &matrixBuffer);
 
 	//Additional
 	// Send light data to pixel shader
 	LightBufferType* lightPtr;
-	deviceContext->Map(lightBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	deviceContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	lightPtr = (LightBufferType*)mappedResource.pData;
 	lightPtr->diffuse = light->getDiffuseColour();
+	lightPtr->ambient = light->getAmbientColour();
 	lightPtr->direction = light->getDirection();
 	lightPtr->padding = 0.0f;
-	deviceContext->Unmap(lightBuffer.Get(), 0);
-	deviceContext->PSSetConstantBuffers(0, 1, lightBuffer.GetAddressOf());
-
-	// Set shader texture resource in the pixel shader.
-	deviceContext->PSSetShaderResources(0, 1, &texture);
-	deviceContext->PSSetSamplers(0, 1, sampleState.GetAddressOf());
+	deviceContext->Unmap(lightBuffer, 0);
+	deviceContext->PSSetConstantBuffers(0, 1, &lightBuffer);
 }

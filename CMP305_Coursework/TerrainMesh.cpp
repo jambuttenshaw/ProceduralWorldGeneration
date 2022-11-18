@@ -1,229 +1,116 @@
 #include "TerrainMesh.h"
-#include <vector>
 
-TerrainMesh::TerrainMesh( ID3D11Device* device, ID3D11DeviceContext* deviceContext, int lresolution ) :
-	PlaneMesh( device, deviceContext, lresolution ) 
+#define clamp(v, minimum, maximum) (max(min(v, maximum), minimum))
+
+
+TerrainMesh::TerrainMesh(ID3D11Device* device)
+	: TerrainMesh(device, 50, 100.0f)
 {
-	Resize( resolution );
-	Regenerate( device, deviceContext );
 }
 
-//Cleanup the heightMap
-TerrainMesh::~TerrainMesh() {
-	delete[] heightMap;
-	heightMap = 0;
+TerrainMesh::TerrainMesh(ID3D11Device* device, unsigned int resolution, float size)
+{
+	BuildMesh(device, resolution, size);
+	CreateHeightmapTexture(device);
 }
 
+TerrainMesh::~TerrainMesh()
+{
+	if (m_VertexBuffer) m_VertexBuffer->Release();
+	if (m_IndexBuffer) m_IndexBuffer->Release();
 
-//Fill an array of floats that represent the height values at each grid point.
-//Here we are producing a Sine wave along the X-axis
-void TerrainMesh::BuildHeightMap() {
-	float height = 0.0f;
-
-	//Scale everything so that the look is consistent across terrain resolutions
-	const float scale =  terrainSize / (float)resolution;
-
-	//TODO: Give some meaning to these magic numbers! What effect does changing them have on terrain?
-	for( int j = 0; j < ( resolution ); j++ ) {
-		for( int i = 0; i < ( resolution ); i++ ) {
-			height = ( sin( (float)i * 0.1f * scale ) ) * 10.0f;
-			height += ( cos( (float)j * 0.033f * scale +1.0f) ) * 10.0f;
-			heightMap[( j * resolution ) + i] = height;
-		}
-	}	
+	// Cleanup the heightMap
+	if (m_UAV) m_UAV->Release();
+	if (m_SRV) m_SRV->Release();
 }
 
-void TerrainMesh::Resize( int newResolution ) {
-	resolution = newResolution;
-	delete[] heightMap;
-	heightMap = new float[resolution * resolution];
-	if( vertexBuffer != NULL ) {
-		vertexBuffer->Release();
-	}
-	vertexBuffer = NULL;
-	if (indexBuffer != NULL) {
-		indexBuffer->Release();
-	}
-	indexBuffer = NULL;
+void TerrainMesh::SendData(ID3D11DeviceContext* deviceContext)
+{
+	// Set vertex buffer stride and offset.
+	unsigned int stride = sizeof(VertexType);
+	unsigned int offset = 0;
+
+	deviceContext->IASetVertexBuffers(0, 1, &m_VertexBuffer, &stride, &offset);
+	deviceContext->IASetIndexBuffer(m_IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	deviceContext->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST);
 }
 
-// Set up the heightmap and create or update the appropriate buffers
-void TerrainMesh::Regenerate( ID3D11Device * device, ID3D11DeviceContext * deviceContext ) {
+void TerrainMesh::BuildMesh(ID3D11Device* device, unsigned int resolution, float size)
+{
+	if (m_VertexBuffer) m_VertexBuffer->Release();
+	if (m_IndexBuffer) m_IndexBuffer->Release();
 
-	int index, i, j;
-	float positionX, height, positionZ, u, v, increment;
-	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
-	D3D11_SUBRESOURCE_DATA vertexData, indexData;
-	
-	//Calculate and store the height values
-	BuildHeightMap();
+	m_Resolution = resolution;
+	m_Size = size;
 
-	// Calculate the number of vertices in the terrain mesh.
-	// We share vertices in this mesh, so the vertex count is simply the terrain 'resolution'
-	// and the index count is the number of resulting triangles * 3 OR the number of quads * 6
-	vertexCount = resolution * resolution;
-	indexCount = ( ( resolution - 1 ) * ( resolution - 1 ) ) * 6;
+	m_VertexCount = (resolution + 1) * (resolution + 1);
+	m_IndexCount = 12 * resolution * resolution;
 
-	std::vector<VertexType> vertices(vertexCount);
-	std::vector<ULONG> indices(indexCount);
+	VertexType* vertices = new VertexType[m_VertexCount];
+	unsigned long* indices = new unsigned long[m_IndexCount];
 
-	index = 0;
+	float fResolution = static_cast<float>(resolution);
 
-	// UV coords.
-	u = 0;
-	v = 0;
-	increment = m_UVscale / resolution;
+	for (unsigned int x = 0; x < resolution + 1; x++)
+	{
+		for (unsigned int z = 0; z < resolution + 1; z++)
+		{
+			float fX = static_cast<float>(x) / fResolution - 0.5f;
+			float fZ = static_cast<float>(z) / fResolution - 0.5f;
 
-	//Scale everything so that the look is consistent across terrain resolutions
-	const float scale = terrainSize / (float)resolution;
+			VertexType v;
+			v.Position = { size * fX, 0.0f, size * fZ };
+			v.UV = { fX + 0.5f, fZ + 0.5f };
+			v.Normal = { 0.0f, 1.0f, 0.0f };
 
-	//Set up vertices
-	for( j = 0; j < ( resolution ); j++ ) {
-		for( i = 0; i < ( resolution ); i++ ) {
-			positionX = (float)i * scale;
-			positionZ = (float)( j ) * scale;
-
-			height = heightMap[index];
-			vertices[index].position = XMFLOAT3(positionX, height, positionZ);
-			vertices[index].texture = XMFLOAT2( u, v );
-
-			u += increment;
-			index++;
-		}
-		u = 0;
-		v += increment;
-	}
-
-	//Set up index list
-	index = 0;
-	for( j = 0; j < ( resolution - 1 ); j++ ) {
-		for( i = 0; i < ( resolution - 1 ); i++ ) {
-
-			//Build index array
-			indices[index] = ( j*resolution ) + i;
-			indices[index + 1] = ( ( j + 1 ) * resolution ) + ( i + 1 );
-			indices[index + 2] = ( ( j + 1 ) * resolution ) + i;
-
-			indices[index + 3] = ( j * resolution ) + i;
-			indices[index + 4] = ( j * resolution ) + ( i + 1 );
-			indices[index + 5] = ( ( j + 1 ) * resolution ) + ( i + 1 );
-			index += 6;
+			vertices[x + z * (resolution + 1)] = v;
 		}
 	}
 
-	//Set up normals
-	for( j = 0; j < ( resolution - 1 ); j++ ) {
-		for( i = 0; i < ( resolution - 1 ); i++ ) {
-			//Calculate the plane normals
-			XMFLOAT3 a, b, c;	//Three corner vertices
-			a = vertices[j * resolution + i].position;
-			b = vertices[j * resolution + i + 1].position;
-			c = vertices[( j + 1 ) * resolution + i].position;
+	unsigned int i = 0;
+	for (unsigned int x = 0; x < resolution; x++)
+	{
+		for (unsigned int z = 0; z < resolution; z++)
+		{
 
-			//Two edges
-			XMFLOAT3 ab( c.x - a.x, c.y - a.y, c.z - a.z );
-			XMFLOAT3 ac( b.x - a.x, b.y - a.y, b.z - a.z );
-			
-			//Calculate the cross product
-			XMFLOAT3 cross;
-			cross.x = ab.y * ac.z - ab.z * ac.y;
-			cross.y = ab.z * ac.x - ab.x * ac.z;
-			cross.z = ab.x * ac.y - ab.y * ac.x;
-			float mag = ( cross.x * cross.x ) + ( cross.y * cross.y ) + ( cross.z * cross.z );
-			mag = sqrtf( mag );
-			cross.x/= mag;
-			cross.y /= mag;
-			cross.z /= mag;
-			vertices[j * resolution + i].normal = cross;
+			// Define 12 control points per terrain quad
+
+			// 0-3 are the actual quad vertices
+			indices[i + 0] = (z + 0) + (x + 0) * (resolution + 1);
+			indices[i + 1] = (z + 1) + (x + 0) * (resolution + 1);
+			indices[i + 2] = (z + 0) + (x + 1) * (resolution + 1);
+			indices[i + 3] = (z + 1) + (x + 1) * (resolution + 1);
+
+			// 4-5 are +x   
+			indices[i + 4] = clamp(z + 0, 0, resolution) + clamp(x + 2, 0, resolution) * (resolution + 1);
+			indices[i + 5] = clamp(z + 0, 0, resolution) + clamp(x + 2, 0, resolution) * (resolution + 1);
+
+			// 6-7 are +z   
+			indices[i + 6] = clamp(z + 2, 0, resolution) + clamp(x + 0, 0, resolution) * (resolution + 1);
+			indices[i + 7] = clamp(z + 2, 0, resolution) + clamp(x + 0, 0, resolution) * (resolution + 1);
+
+			// 8-9 are -x   
+			indices[i + 8] = clamp(z + 0, 0, resolution) + clamp(x - 1, 0, resolution) * (resolution + 1);
+			indices[i + 9] = clamp(z + 0, 0, resolution) + clamp(x - 1, 0, resolution) * (resolution + 1);
+
+			// 10-11 are -z
+			indices[i + 10] = clamp(z - 1, 0, resolution) + clamp(x + 0, 0, resolution) * (resolution + 1);
+			indices[i + 11] = clamp(z - 1, 0, resolution) + clamp(x + 0, 0, resolution) * (resolution + 1);
+
+			i += 12;
 		}
 	}
 
-	//Smooth the normals by averaging the normals from the surrounding planes
-	XMFLOAT3 smoothedNormal( 0, 1, 0 );
-	for( j = 0; j < resolution; j++ ) {
-		for( i = 0; i < resolution; i++ ) {
-			smoothedNormal.x = 0;
-			smoothedNormal.y = 0;
-			smoothedNormal.z = 0;
-			float count = 0;
-			//Left planes
-			if( ( i - 1 ) >= 0 ) {
-				//Top planes
-				if( ( j ) < ( resolution - 1 ) ) {
-					smoothedNormal.x += vertices[j * resolution + ( i - 1 )].normal.x;
-					smoothedNormal.y += vertices[j * resolution + ( i - 1 )].normal.y;
-					smoothedNormal.z += vertices[j * resolution + ( i - 1 )].normal.z;
-					count++;
-				}
-				//Bottom planes
-				if( ( j - 1 ) >= 0 ) {
-					smoothedNormal.x += vertices[( j - 1 ) * resolution + ( i - 1 )].normal.x;
-					smoothedNormal.y += vertices[( j - 1 ) * resolution + ( i - 1 )].normal.y;
-					smoothedNormal.z += vertices[( j - 1 ) * resolution + ( i - 1 )].normal.z;
-					count++;
-				}
-			}
-			//right planes
-			if( ( i ) <( resolution - 1 ) ) {
 
-				//Top planes
-				if( ( j ) < ( resolution - 1 ) ) {
-					smoothedNormal.x += vertices[j * resolution + i].normal.x;
-					smoothedNormal.y += vertices[j * resolution + i].normal.y;
-					smoothedNormal.z += vertices[j * resolution + i].normal.z;
-					count++;
-				}
-				//Bottom planes
-				if( ( j - 1 ) >= 0 ) {
-					smoothedNormal.x += vertices[( j - 1 ) * resolution + i].normal.x;
-					smoothedNormal.y += vertices[( j - 1 ) * resolution + i].normal.y;
-					smoothedNormal.z += vertices[( j - 1 ) * resolution + i].normal.z;
-					count++;
-				}
-			}
-			smoothedNormal.x /= count;
-			smoothedNormal.y /= count;
-			smoothedNormal.z /= count;
-
-			float mag = sqrt( ( smoothedNormal.x * smoothedNormal.x ) + ( smoothedNormal.y * smoothedNormal.y ) + ( smoothedNormal.z * smoothedNormal.z ) );
-			smoothedNormal.x /= mag;
-			smoothedNormal.y /= mag;
-			smoothedNormal.z /= mag;
-
-			vertices[j * resolution + i].normal = smoothedNormal;
-		}
-	}
-	//If we've not yet created our dyanmic Vertex and Index buffers, do that now
-	if( vertexBuffer == NULL ) {
-		CreateBuffers( device, vertices.data(), indices.data());
-	}
-	else {
-		//If we've already made our buffers, update the information
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		ZeroMemory( &mappedResource, sizeof( D3D11_MAPPED_SUBRESOURCE ) );
-
-		//  Disable GPU access to the vertex buffer data.
-		deviceContext->Map( vertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource );
-		//  Update the vertex buffer here.
-		memcpy( mappedResource.pData, vertices.data(), sizeof( VertexType ) * vertexCount );
-		//  Reenable GPU access to the vertex buffer data.
-		deviceContext->Unmap( vertexBuffer, 0 );
-	}
-
-}
-
-//Create the vertex and index buffers that will be passed along to the graphics card for rendering
-//For CMP305, you don't need to worry so much about how or why yet, but notice the Vertex buffer is DYNAMIC here as we are changing the values often
-void TerrainMesh::CreateBuffers( ID3D11Device* device, VertexType* vertices, unsigned long* indices ) {
-
+	// setup vertex buffer and index buffer
 	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
 	D3D11_SUBRESOURCE_DATA vertexData, indexData;
 
-	// Set up the description of the dyanmic vertex buffer.
-	vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	vertexBufferDesc.ByteWidth = sizeof( VertexType ) * vertexCount;
+	// Set up the description of the static vertex buffer.
+	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.ByteWidth = sizeof(VertexType) * m_VertexCount;
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	vertexBufferDesc.CPUAccessFlags = 0;
 	vertexBufferDesc.MiscFlags = 0;
 	vertexBufferDesc.StructureByteStride = 0;
 	// Give the subresource structure a pointer to the vertex data.
@@ -231,11 +118,11 @@ void TerrainMesh::CreateBuffers( ID3D11Device* device, VertexType* vertices, uns
 	vertexData.SysMemPitch = 0;
 	vertexData.SysMemSlicePitch = 0;
 	// Now create the vertex buffer.
-	device->CreateBuffer( &vertexBufferDesc, &vertexData, &vertexBuffer );
+	device->CreateBuffer(&vertexBufferDesc, &vertexData, &m_VertexBuffer);
 
 	// Set up the description of the static index buffer.
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	indexBufferDesc.ByteWidth = sizeof( unsigned long ) * indexCount;
+	indexBufferDesc.ByteWidth = sizeof(unsigned long) * m_IndexCount;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.MiscFlags = 0;
@@ -244,7 +131,49 @@ void TerrainMesh::CreateBuffers( ID3D11Device* device, VertexType* vertices, uns
 	indexData.pSysMem = indices;
 	indexData.SysMemPitch = 0;
 	indexData.SysMemSlicePitch = 0;
-
 	// Create the index buffer.
-	device->CreateBuffer( &indexBufferDesc, &indexData, &indexBuffer );
+	device->CreateBuffer(&indexBufferDesc, &indexData, &m_IndexBuffer);
+
+	// Release the arrays now that the buffers have been created and loaded.
+	delete[] vertices;
+	delete[] indices;
+}
+
+void TerrainMesh::CreateHeightmapTexture(ID3D11Device* device)
+{
+	// create heightmap texture
+
+	HRESULT hr;
+
+	// can be local, as reference to texture is kept through SRV/UAV
+	ID3D11Texture2D* tex;
+
+	D3D11_TEXTURE2D_DESC textureDesc;
+	ZeroMemory(&textureDesc, sizeof(textureDesc));
+	textureDesc.Width = m_HeightmapResolution;
+	textureDesc.Height = m_HeightmapResolution;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS; // texture needs to be accessed by both SRV and UAV
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.MiscFlags = 0;
+	hr = device->CreateTexture2D(&textureDesc, nullptr, &tex);
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV;
+	ZeroMemory(&descUAV, sizeof(descUAV));
+	descUAV.Format = DXGI_FORMAT_UNKNOWN;
+	descUAV.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+	descUAV.Texture2D.MipSlice = 0;
+	hr = device->CreateUnorderedAccessView(tex, &descUAV, &m_UAV);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC descSRV;
+	descSRV.Format = textureDesc.Format;
+	descSRV.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	descSRV.Texture2D.MostDetailedMip = 0;
+	descSRV.Texture2D.MipLevels = 1;
+	hr = device->CreateShaderResourceView(tex, &descSRV, &m_SRV);
 }

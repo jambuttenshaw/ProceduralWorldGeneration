@@ -31,6 +31,9 @@
 *.out
 *.app
 
+lib/
 .vs/
 x64/
 imgui.ini
+*.idb
+*.pdb

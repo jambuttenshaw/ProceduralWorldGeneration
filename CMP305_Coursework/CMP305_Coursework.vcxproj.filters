@@ -9,15 +9,11 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{f303e450-086c-4bbe-a10a-0b81608ce6ac}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="App.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,11 +44,29 @@
     <ClCompile Include="CylinderMeshT.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HeightmapFilters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderTarget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializationHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WaterShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseFullScreenShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="App1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="App.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="InstancedCubeMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -80,25 +94,96 @@
     <ClInclude Include="LineMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="App1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseFullScreenShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseHeightmapFilter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HeightmapFilters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderTarget.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializationHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Transform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WaterShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="instance_ps.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="shaders\fullscreen_vs.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="instance_vs.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="shaders\instance_ps.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\light_vs.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="shaders\instance_vs.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\light_ps.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="shaders\lighting_ps.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="unlit_ps.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="shaders\lighting_vs.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="unlit_vs.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="shaders\ridgeNoise_cs.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="shaders\simpleNoise_cs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\terrain_ds.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\terrain_hs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\terrain_ps.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\terrain_vs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\terrainNoise_cs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\unlit_ps.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\unlit_vs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\warpedSimpleNoise_cs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\water_ps.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\water_vs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\math.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\noiseFunctions.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\noiseSimplex.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
