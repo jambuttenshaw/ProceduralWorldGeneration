@@ -13,8 +13,9 @@
 #include "RenderTarget.h"
 
 #include "TerrainMesh.h"
+#include "Heightmap.h"
 
-#include "Transform.h"
+#include "GameObject.h"
 
 #include <array>
 
@@ -43,6 +44,8 @@ protected:
 
 	void applyFilterStack();
 
+	void createTerrain(const XMFLOAT3& pos);
+
 	IHeightmapFilter* createFilterFromIndex(int index);
 
 	void saveSettings(const std::string& file);
@@ -51,27 +54,28 @@ protected:
 private:
 	float m_Time = 0.0f;
 
-	LightShader* m_LightShader;
-	TerrainShader* m_TerrainShader;
-	WaterShader* m_WaterShader;
+	LightShader* m_LightShader = nullptr;
+	TerrainShader* m_TerrainShader = nullptr;
+	WaterShader* m_WaterShader = nullptr;
 
-	RenderTarget* m_RenderTarget;
+	RenderTarget* m_RenderTarget = nullptr;
 
-	Transform m_TerrainTransform;
-	TerrainMesh* m_Terrain;
+	TerrainMesh* m_TerrainMesh = nullptr;
+	CubeMesh* m_Cube = nullptr;
+
+	std::vector<GameObject> m_GameObjects;
+
+	std::vector<Heightmap*> m_Heightmaps;
+
+	std::map<size_t, Heightmap*> m_GOToHeightmap;
 	
-	bool m_ShowCube = false;
-	CubeMesh* m_Cube;
-	Transform m_CubeTransform;
-
 	Light* light;
 	XMFLOAT3 lightDiffuse{ 1.0f, 1.0f, 1.0f };
 	XMFLOAT3 lightAmbient{ 0.2f, 0.2f, 0.2f };
 	XMFLOAT3 lightSpecular{ 0.2f, 0.2f, 0.2f };
 	XMFLOAT3 lightDir{ 0.7f, -0.7f, 0.7f };
 
-	std::vector<IHeightmapFilter*> m_HeightmapFilters;
-	int m_SelectedHeightmapFilter = -1;
+	IHeightmapFilter* m_HeightmapFilter;
 	
 	std::array<const char*, 4> m_AllFilterNames = {
 		"Simple Noise", "Ridge Noise", "Warped Simple Noise", "Terrain Noise"

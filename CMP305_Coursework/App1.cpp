@@ -8,10 +8,10 @@
 
 App1::App1()
 {
-	m_Terrain = nullptr;
+	m_TerrainMesh = nullptr;
 	m_TerrainShader = nullptr;
 
-	strcpy_s(m_SaveFilePath, "res/settings/blank.json");
+	strcpy_s(m_SaveFilePath, "res/settings/earth.json");
 }
 
 void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, Input *in, bool VSYNC, bool FULL_SCREEN)
@@ -20,8 +20,6 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	BaseApplication::init(hinstance, hwnd, screenWidth, screenHeight, in, VSYNC, FULL_SCREEN);
 
 	// Load textures
-	textureMgr->loadTexture(L"grass", L"res/grass.png");
-	textureMgr->loadTexture(L"dirt", L"res/dirt.png");
 	textureMgr->loadTexture(L"oceanNormalMapA", L"res/wave_normals1.png");
 	textureMgr->loadTexture(L"oceanNormalMapB", L"res/wave_normals2.png");
 
@@ -31,13 +29,17 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	m_RenderTarget = new RenderTarget(renderer->getDevice(), screenWidth, screenHeight);
 
-	m_Terrain = new TerrainMesh(renderer->getDevice());
-
+	m_TerrainMesh = new TerrainMesh(renderer->getDevice());
 	m_Cube = new CubeMesh(renderer->getDevice(), renderer->getDeviceContext(), 2);
-	m_CubeTransform.SetScale(0.5f);
 
 	camera->setPosition(-50.0f, 30.0f, -50.0f);
 	camera->setRotation(0.0f, 0.0f, 0.0f);
+
+	// create game objects
+	createTerrain({ 0.0f, 0.0f, 0.0f });
+	createTerrain({ 100.0f, 0.0f, 0.0f });
+	createTerrain({ 0.0f, 0.0f, 100.0f });
+	createTerrain({ 100.0f, 0.0f, 100.0f });
 
 	// Initialise light
 	light = new Light();
@@ -59,18 +61,17 @@ App1::~App1()
 	// probably not the best place to put this...
 	if (m_SaveOnExit) saveSettings(std::string(m_SaveFilePath));
 
-	// Release the Direct3D object.
-	if (m_Terrain) delete m_Terrain;
+
+	if (m_TerrainMesh) delete m_TerrainMesh;
 	if (m_TerrainShader) delete m_TerrainShader;
 	if (m_LightShader) delete m_LightShader;
 
 	if (m_RenderTarget) delete m_RenderTarget;
 
-	for (auto filter : m_HeightmapFilters)
-	{
-		if (filter) delete filter;
-	}
-	m_HeightmapFilters.clear();
+	if (m_HeightmapFilter) delete m_HeightmapFilter;
+
+	for (auto heightmap : m_Heightmaps)
+		delete heightmap;
 }
 
 
@@ -146,22 +147,23 @@ void App1::worldPass()
 	XMMATRIX projectionMatrix = renderer->getProjectionMatrix();
 
 
+	int goIndex = 0;
+	for (auto& go : m_GameObjects)
 	{
-		XMMATRIX w = worldMatrix * m_TerrainTransform.GetMatrix();
-
-		// Send geometry data, set shader parameters, render object with shader
-		m_Terrain->SendData(renderer->getDeviceContext());
-		m_TerrainShader->SetShaderParameters(renderer->getDeviceContext(), w, viewMatrix, projectionMatrix, m_Terrain->GetSRV(), light, camera);
-		m_TerrainShader->Render(renderer->getDeviceContext(), m_Terrain->GetIndexCount());
-	}
-
-	if (m_ShowCube)
-	{
-		XMMATRIX w = worldMatrix * m_CubeTransform.GetMatrix();
-
-		m_Cube->sendData(renderer->getDeviceContext());
-		m_LightShader->setShaderParameters(renderer->getDeviceContext(), w, viewMatrix, projectionMatrix, light);
-		m_LightShader->render(renderer->getDeviceContext(), m_Cube->getIndexCount());
+		XMMATRIX w = worldMatrix * go.transform.GetMatrix();
+		switch (go.meshType)
+		{
+		case GameObject::MeshType::Regular:
+			go.mesh.regular->sendData(renderer->getDeviceContext());
+			m_LightShader->setShaderParameters(renderer->getDeviceContext(), w, viewMatrix, projectionMatrix, light);
+			m_LightShader->render(renderer->getDeviceContext(), go.mesh.regular->getIndexCount());
+			break;
+		case GameObject::MeshType::Terrain:
+			go.mesh.terrain->SendData(renderer->getDeviceContext());
+			m_TerrainShader->SetShaderParameters(renderer->getDeviceContext(), w, viewMatrix, projectionMatrix, m_GOToHeightmap.at(goIndex)->GetSRV(), light);
+			m_TerrainShader->Render(renderer->getDeviceContext(), go.mesh.terrain->GetIndexCount());
+		}
+		goIndex++;
 	}
 }
 
@@ -212,11 +214,6 @@ void App1::gui()
 		}
 		ImGui::Separator();
 
-		ImGui::Checkbox("Show Cube", &m_ShowCube);
-		if (ImGui::Button("Move Cube"))
-			m_CubeTransform.SetTranslation(camera->getPosition());
-		ImGui::Separator();
-		
 		if (ImGui::TreeNode("Lighting"))
 		{
 			if (ImGui::ColorEdit3("Light Diffuse", &lightDiffuse.x))
@@ -270,70 +267,45 @@ void App1::gui()
 	}
 	ImGui::Separator();
 
+	if (ImGui::CollapsingHeader("GameObjects"))
+	{
+		int i = 0;
+		for (auto& go : m_GameObjects)
+		{
+			if (ImGui::TreeNode((void*)(intptr_t)(i), "Game Object %d", i))
+			{
+				go.SettingsGUI();
+				ImGui::Separator();
+
+				ImGui::TreePop();
+			}
+			i++;
+		}
+	}
+	ImGui::Separator();
+
 	if (ImGui::CollapsingHeader("Terrain Filters"))
 	{
-
-
-		struct FuncHolder { // to allow inline function declaration
-			static bool ItemGetter(void* data, int idx, const char** out_str)
-			{
-				*out_str = ((IHeightmapFilter**)data)[idx]->Label();
-				return true;
-			} 
-		};
-		
-		ImGui::Text("Filter Stack:");
-		ImGui::Combo("Filter", &m_SelectedHeightmapFilter, &FuncHolder::ItemGetter, m_HeightmapFilters.data(), m_HeightmapFilters.size());
-
-		if (ImGui::Button("+"))
-			ImGui::OpenPopup("addfilter_popup");
-		regenerateTerrain |= addTerrainFilterMenu();
-
-		ImGui::SameLine();
-		if (ImGui::Button("-"))
+		int currentHeightmapFilter = 0;
+		for (auto& name : m_AllFilterNames)
 		{
-			if (m_HeightmapFilters.size() > 0)
-			{
-				delete m_HeightmapFilters[m_SelectedHeightmapFilter];
-				m_HeightmapFilters.erase(m_HeightmapFilters.begin() + m_SelectedHeightmapFilter);
-
-				if (m_HeightmapFilters.empty()) m_SelectedHeightmapFilter = -1;
-				if (m_SelectedHeightmapFilter > 0) --m_SelectedHeightmapFilter;
-
-				regenerateTerrain = true;
-			}
+			if (name == m_HeightmapFilter->Label())
+				break;
+			currentHeightmapFilter++;
 		}
-		ImGui::SameLine();
-		if (ImGui::Button("^"))
+		if (ImGui::Combo("Filter", &currentHeightmapFilter, m_AllFilterNames.data(), m_AllFilterNames.size()))
 		{
-			if (m_SelectedHeightmapFilter > 0 && m_HeightmapFilters.size() > 1)
-			{
-				std::iter_swap(m_HeightmapFilters.begin() + m_SelectedHeightmapFilter - 1, m_HeightmapFilters.begin() + m_SelectedHeightmapFilter);
-				--m_SelectedHeightmapFilter;
-
-				regenerateTerrain = true;
-			}
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("v"))
-		{
-			if (m_SelectedHeightmapFilter < m_HeightmapFilters.size() - 1 && m_HeightmapFilters.size() > 1)
-			{
-				std::iter_swap(m_HeightmapFilters.begin() + m_SelectedHeightmapFilter, m_HeightmapFilters.begin() + m_SelectedHeightmapFilter + 1);
-				++m_SelectedHeightmapFilter;
-				
-				regenerateTerrain = true;
-			}
+			delete m_HeightmapFilter;
+			m_HeightmapFilter = createFilterFromIndex(currentHeightmapFilter);
 		}
 
-		
-		if (m_SelectedHeightmapFilter >= 0)
+		if (m_HeightmapFilter)
 		{
 			ImGui::Separator();
 			ImGui::Text("Filter Settings");
 			ImGui::Separator();
 
-			regenerateTerrain |= m_HeightmapFilters[m_SelectedHeightmapFilter]->SettingsGUI();
+			regenerateTerrain |= m_HeightmapFilter->SettingsGUI();
 		}
 	}
 	ImGui::Separator();
@@ -342,39 +314,24 @@ void App1::gui()
 		applyFilterStack();
 }
 
-bool App1::addTerrainFilterMenu()
-{
-	if (ImGui::BeginPopup("addfilter_popup"))
-	{
-		int selected_filter = -1;
-
-		ImGui::Text("New Filter...");
-		ImGui::Separator();
-		for (int i = 0; i < m_AllFilterNames.size(); i++)
-		{
-			if (ImGui::Selectable(m_AllFilterNames[i]))
-				selected_filter = i;
-		}
-		ImGui::EndPopup();
-		
-		if (selected_filter == -1) return false;
-
-		IHeightmapFilter* newFilter = createFilterFromIndex(selected_filter);
-
-		m_SelectedHeightmapFilter = m_HeightmapFilters.size();
-		m_HeightmapFilters.push_back(newFilter);
-
-		return true;
-	}
-	return false;
-}
-
 void App1::applyFilterStack()
 {
-	for (auto filter : m_HeightmapFilters)
+	for (auto heightmap : m_Heightmaps)
 	{
-		filter->Run(renderer->getDeviceContext(), m_Terrain->GetUAV(), m_Terrain->GetHeightmapResolution());
+		m_HeightmapFilter->Run(renderer->getDeviceContext(), heightmap);
 	}
+}
+
+void App1::createTerrain(const XMFLOAT3& pos)
+{
+	m_GameObjects.push_back({ m_TerrainMesh, pos });
+
+	Heightmap* newHeightmap = new Heightmap(renderer->getDevice(), 1024);
+	newHeightmap->SetOffset({ pos.x / m_TerrainMesh->GetSize(), pos.z / m_TerrainMesh->GetSize() });
+
+	m_Heightmaps.push_back(newHeightmap);
+
+	m_GOToHeightmap.insert({ m_GameObjects.size() - 1, newHeightmap });
 }
 
 IHeightmapFilter* App1::createFilterFromIndex(int index)
@@ -399,10 +356,7 @@ void App1::saveSettings(const std::string& file)
 
 	// serialize filter data
 	serialized["filters"] = nlohmann::json::array();
-	for (auto filter : m_HeightmapFilters)
-	{
-		serialized["filters"].push_back(filter->Serialize());
-	}
+	serialized["filters"].push_back(m_HeightmapFilter->Serialize());
 
 	// serialize light settings
 	serialized["lightDir"] = SerializationHelper::SerializeFloat3(lightDir);
@@ -425,9 +379,7 @@ void App1::loadSettings(const std::string& file)
 {
 	
 	// clear out existing settings
-	for (auto filter : m_HeightmapFilters)
-		delete filter;
-	m_HeightmapFilters.clear();
+	delete m_HeightmapFilter;
 
 	// load data from file
 	std::ifstream infile(file);
@@ -450,9 +402,8 @@ void App1::loadSettings(const std::string& file)
 			}
 			if (index == m_AllFilterNames.size()) continue; // saved filter name must be invalid
 
-			IHeightmapFilter* newFilter = createFilterFromIndex(index);
-			newFilter->LoadFromJson(filter);
-			m_HeightmapFilters.push_back(newFilter);
+			m_HeightmapFilter = createFilterFromIndex(index);
+			m_HeightmapFilter->LoadFromJson(filter);
 		}
 	}
 

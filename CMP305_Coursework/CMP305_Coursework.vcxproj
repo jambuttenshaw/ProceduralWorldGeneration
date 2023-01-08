@@ -167,6 +167,7 @@
     <ClCompile Include="App1.cpp" />
     <ClCompile Include="BaseFullScreenShader.cpp" />
     <ClCompile Include="CylinderMeshT.cpp" />
+    <ClCompile Include="Heightmap.cpp" />
     <ClCompile Include="HeightmapFilters.cpp" />
     <ClCompile Include="InstancedCubeMesh.cpp" />
     <ClCompile Include="InstanceShader.cpp" />
@@ -187,6 +188,8 @@
     <ClInclude Include="BaseFullScreenShader.h" />
     <ClInclude Include="BaseHeightmapFilter.h" />
     <ClInclude Include="CylinderMeshT.h" />
+    <ClInclude Include="GameObject.h" />
+    <ClInclude Include="Heightmap.h" />
     <ClInclude Include="HeightmapFilters.h" />
     <ClInclude Include="InstancedCubeMesh.h" />
     <ClInclude Include="InstanceShader.h" />
@@ -286,11 +289,6 @@
     <FxCompile Include="shaders\water_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="shaders\water_vs.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
   </ItemGroup>

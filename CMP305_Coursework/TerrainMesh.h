@@ -22,15 +22,10 @@ public:
 
 	void BuildMesh(ID3D11Device* device, unsigned int resolution, float size);
 
-	ID3D11UnorderedAccessView* GetUAV() const { return m_UAV; }
-	ID3D11ShaderResourceView*  GetSRV() const { return m_SRV; }
-	unsigned int GetHeightmapResolution() const { return m_HeightmapResolution; }
+	inline unsigned long GetVertexCount() const { return m_VertexCount; }
+	inline unsigned long GetIndexCount() const { return m_IndexCount; }
 
-	unsigned long GetVertexCount() const { return m_VertexCount; }
-	unsigned long GetIndexCount() const { return m_IndexCount; }
-
-private:
-	void CreateHeightmapTexture(ID3D11Device* device);
+	inline float GetSize() const { return m_Size; }
 
 private:
 	unsigned int m_Resolution = 10; // number of cells along one axis of the terrain mesh
@@ -39,10 +34,4 @@ private:
 	ID3D11Buffer* m_VertexBuffer = nullptr;
 	ID3D11Buffer* m_IndexBuffer = nullptr;
 	unsigned long m_VertexCount = 0, m_IndexCount = 0;
-
-	// heightmap texture
-	ID3D11UnorderedAccessView* m_UAV = nullptr;
-	ID3D11ShaderResourceView*  m_SRV = nullptr;
-
-	const unsigned int m_HeightmapResolution = 1024;
 };

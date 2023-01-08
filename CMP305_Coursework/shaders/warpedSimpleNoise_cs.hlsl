@@ -2,7 +2,11 @@
 
 RWTexture2D<float4> gHeightmap : register(u0);
 
-cbuffer HeightmapSettingsBuffer : register(b0)
+cbuffer MatrixBuffer : register(b0)
+{
+    float4 params;
+}
+cbuffer HeightmapSettingsBuffer : register(b1)
 {
     SimpleNoiseSettings warpSettings;
     SimpleNoiseSettings settings;
