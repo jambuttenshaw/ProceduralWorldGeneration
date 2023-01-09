@@ -74,10 +74,11 @@ private:
 	XMFLOAT3 lightSpecular{ 0.2f, 0.2f, 0.2f };
 	XMFLOAT3 lightDir{ 0.7f, -0.7f, 0.7f };
 
-	IHeightmapFilter* m_HeightmapFilter;
+	IHeightmapFilter* m_HeightmapFilter = nullptr;
+	IHeightmapFilter* m_BiomeFilter = nullptr;
 	
-	std::array<const char*, 5> m_AllFilterNames = {
-		"Simple Noise", "Ridge Noise", "Warped Simple Noise", "Terrain Noise", "Biomes"
+	std::array<const char*, 4> m_AllFilterNames = {
+		"Simple Noise", "Ridge Noise", "Warped Simple Noise", "Terrain Noise"
 	};
 
 	char m_SaveFilePath[128];

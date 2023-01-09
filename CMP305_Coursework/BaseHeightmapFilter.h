@@ -83,7 +83,7 @@ public:
 		if (m_SettingsBuffer) m_SettingsBuffer->Release();
 	}
 
-	virtual void Run(ID3D11DeviceContext* deviceContext, Heightmap* heightmap) override final
+	virtual void Run(ID3D11DeviceContext* deviceContext, Heightmap* heightmap) override
 	{
 		ID3D11UnorderedAccessView* uav = heightmap->GetUAV();
 		deviceContext->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);

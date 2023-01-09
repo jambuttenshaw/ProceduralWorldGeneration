@@ -37,9 +37,9 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	// create game objects
 	createTerrain({ 0.0f, 0.0f, 0.0f });
-	createTerrain({ 100.0f, 0.0f, 0.0f });
-	createTerrain({ 0.0f, 0.0f, 100.0f });
-	createTerrain({ 100.0f, 0.0f, 100.0f });
+	createTerrain({ -100.0f, 0.0f, 0.0f });
+	createTerrain({ 0.0f, 0.0f, -100.0f });
+	createTerrain({ -100.0f, 0.0f, -100.0f });
 
 	// Initialise light
 	light = new Light();
@@ -47,6 +47,8 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	light->setAmbientColour(lightAmbient.x, lightAmbient.y, lightAmbient.z, 1.0f);
 	light->setSpecularColour(lightSpecular.x, lightSpecular.y, lightSpecular.z, 1.0f);
 	light->setDirection(lightDir.x, lightDir.y, lightDir.z);
+
+	m_BiomeFilter = new VoronoiBiomesFilter(renderer->getDevice());
 
 	if (m_LoadOnOpen)
 	{
@@ -286,26 +288,34 @@ void App1::gui()
 
 	if (ImGui::CollapsingHeader("Terrain Filters"))
 	{
-		int currentHeightmapFilter = 0;
-		for (auto& name : m_AllFilterNames)
+		if (ImGui::TreeNode("Heightmap Filter"))
 		{
-			if (name == m_HeightmapFilter->Label())
-				break;
-			currentHeightmapFilter++;
-		}
-		if (ImGui::Combo("Filter", &currentHeightmapFilter, m_AllFilterNames.data(), m_AllFilterNames.size()))
-		{
-			delete m_HeightmapFilter;
-			m_HeightmapFilter = createFilterFromIndex(currentHeightmapFilter);
-		}
+			int currentHeightmapFilter = 0;
+			for (auto& name : m_AllFilterNames)
+			{
+				if (name == m_HeightmapFilter->Label())
+					break;
+				currentHeightmapFilter++;
+			}
+			if (ImGui::Combo("Filter", &currentHeightmapFilter, m_AllFilterNames.data(), m_AllFilterNames.size()))
+			{
+				delete m_HeightmapFilter;
+				m_HeightmapFilter = createFilterFromIndex(currentHeightmapFilter);
+			}
 
-		if (m_HeightmapFilter)
+			if (m_HeightmapFilter)
+			{
+				regenerateTerrain |= m_HeightmapFilter->SettingsGUI();
+			}
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNode("Biome Filter"))
 		{
-			ImGui::Separator();
-			ImGui::Text("Filter Settings");
-			ImGui::Separator();
-
-			regenerateTerrain |= m_HeightmapFilter->SettingsGUI();
+			if (m_BiomeFilter)
+			{
+				regenerateTerrain |= m_BiomeFilter->SettingsGUI();
+			}
+			ImGui::TreePop();
 		}
 	}
 	ImGui::Separator();
@@ -318,7 +328,10 @@ void App1::applyFilterStack()
 {
 	for (auto heightmap : m_Heightmaps)
 	{
-		m_HeightmapFilter->Run(renderer->getDeviceContext(), heightmap);
+		if (m_BiomeFilter)
+			m_BiomeFilter->Run(renderer->getDeviceContext(), heightmap);
+		if (m_HeightmapFilter)
+			m_HeightmapFilter->Run(renderer->getDeviceContext(), heightmap);
 	}
 }
 
@@ -343,7 +356,6 @@ IHeightmapFilter* App1::createFilterFromIndex(int index)
 	case 1: newFilter = new RidgeNoiseFilter(renderer->getDevice()); break;
 	case 2: newFilter = new WarpedSimpleNoiseFilter(renderer->getDevice()); break;
 	case 3: newFilter = new TerrainNoiseFilter(renderer->getDevice()); break;
-	case 4: newFilter = new BiomesFilter(renderer->getDevice()); break;
 	default: break;
 	}
 	assert(newFilter != nullptr);
@@ -356,8 +368,8 @@ void App1::saveSettings(const std::string& file)
 	nlohmann::json serialized;
 
 	// serialize filter data
-	serialized["filters"] = nlohmann::json::array();
-	serialized["filters"].push_back(m_HeightmapFilter->Serialize());
+	serialized["heightmapFilter"] = m_HeightmapFilter->Serialize();
+	serialized["biomeFilter"] = m_BiomeFilter->Serialize();
 
 	// serialize light settings
 	serialized["lightDir"] = SerializationHelper::SerializeFloat3(lightDir);
@@ -378,9 +390,9 @@ void App1::saveSettings(const std::string& file)
 
 void App1::loadSettings(const std::string& file)
 {
-	
 	// clear out existing settings
 	delete m_HeightmapFilter;
+	delete m_BiomeFilter;
 
 	// load data from file
 	std::ifstream infile(file);
@@ -389,11 +401,11 @@ void App1::loadSettings(const std::string& file)
 	infile.close();
 
 	// construct objects from data
-	if (data.contains("filters"))
+	if (data.contains("heightmapFilter"))
 	{
-		for (auto filter : data["filters"])
+		auto filter = data["heightmapFilter"];
+		if (filter.contains("name"))
 		{
-			if (!filter.contains("name")) continue;
 			// work out the filter index
 			int index = 0;
 			for (const auto& name : m_AllFilterNames)
@@ -401,11 +413,17 @@ void App1::loadSettings(const std::string& file)
 				if (name == filter["name"]) break;
 				index++;
 			}
-			if (index == m_AllFilterNames.size()) continue; // saved filter name must be invalid
-
-			m_HeightmapFilter = createFilterFromIndex(index);
-			m_HeightmapFilter->LoadFromJson(filter);
+			if (index != m_AllFilterNames.size())
+			{
+				m_HeightmapFilter = createFilterFromIndex(index);
+				m_HeightmapFilter->LoadFromJson(filter);
+			}
 		}
+	}
+	if (data.contains("biomeFilter"))
+	{
+		m_BiomeFilter = new VoronoiBiomesFilter(renderer->getDevice());
+		m_BiomeFilter->LoadFromJson(data["biomeFilter"]);
 	}
 
 	if (data.contains("lightDir")) SerializationHelper::LoadFloat3FromJson(&lightDir, data["lightDir"]);

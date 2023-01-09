@@ -1,6 +1,13 @@
 #include "noiseFunctions.hlsli"
 #include "math.hlsli"
 
+struct BiomeType
+{
+	float2 centre;
+	int type;
+};
+
+StructuredBuffer<BiomeType> gVoronoiPoints : register(t0);
 RWTexture2D<float4> gHeightmap : register(u0);
 
 cbuffer MatrixBuffer : register(b0)
@@ -10,13 +17,14 @@ cbuffer MatrixBuffer : register(b0)
 }
 cbuffer HeightmapSettingsBuffer : register(b1)
 {
-    SimpleNoiseSettings biomeNoiseSettings;
-    // settings to generate the points
-    int maxBiome;
+    float2 minPointBounds;
+    float2 maxPointBounds;
     
-    // settings to generate the voronoi
-    float3 padding0;
-    
+	int pointCount;
+	int biomeSeed;
+	int numBiomeTypes;
+	
+    float padding0;
 }
 
 
@@ -30,14 +38,21 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         return;
     
     float2 uv = float2(dispatchThreadID.xy) / float2(heightmapDims - float2(1, 1));
-    
     float2 pos = uv + offset;
     
+	float minDist = distance(gVoronoiPoints[0].centre, pos);
+	int biomeType = gVoronoiPoints[0].type;
+	for (int i = 1; i < pointCount; i++)
+	{
+		float dist = distance(gVoronoiPoints[i].centre, pos);
+		if (dist < minDist)
+		{
+			minDist = dist;
+			biomeType = gVoronoiPoints[i].type;
+		}
+	}
     
-    float biome = abs(SimpleNoise(pos, biomeNoiseSettings));
-    biome = min(biome, maxBiome);
-    
-    float4 v = gHeightmap[dispatchThreadID.xy];
-    v.g = frac(biome);
-    gHeightmap[dispatchThreadID.xy] = v;
+	float4 v = gHeightmap[dispatchThreadID.xy];
+	v.g = float(biomeType) / float(numBiomeTypes);
+	gHeightmap[dispatchThreadID.xy] = v;
 }

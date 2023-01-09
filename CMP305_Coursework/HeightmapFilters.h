@@ -75,13 +75,15 @@ struct TerrainNoiseSettings
 };
 
 
-struct BiomeSettings
+struct VoronoiBiomeSettings
 {
-	SimpleNoiseSettings BiomeNoiseSettings;
+	XMFLOAT2 MinPointBounds{ -1.0f, -1.0f };
+	XMFLOAT2 MaxPointBounds{ 1.0f, 1.0f };
 
-	int MaxBiome = 1;
-
-	XMFLOAT3 Padding;
+	int PointCount = 4;
+	int BiomeSeed = 0;
+	int NumBiomeTypes = 4;
+	float Padding;
 
 	bool SettingsGUI();
 	nlohmann::json Serialize() const;
@@ -135,15 +137,24 @@ public:
 };
 
 
-class BiomesFilter : public BaseHeightmapFilter<BiomeSettings>
+class VoronoiBiomesFilter : public BaseHeightmapFilter<VoronoiBiomeSettings>
 {
-public:
-	BiomesFilter(ID3D11Device* device)
-		: BaseHeightmapFilter(device, L"voronoiBiomes_cs.cso")
+	struct BiomeType
 	{
-		m_Settings.BiomeNoiseSettings.Persistence = 0.0f;
-	}
-	virtual ~BiomesFilter() = default;
+		XMFLOAT2 centre;
+		int type;
+	};
+public:
+	VoronoiBiomesFilter(ID3D11Device* device);
+	virtual ~VoronoiBiomesFilter();
 
-	inline virtual const char* Label() const override { return "Biomes"; }
+	virtual void Run(ID3D11DeviceContext* deviceContext, Heightmap* heightmap) override;
+
+	inline virtual const char* Label() const override { return "Voronoi Biomes"; }
+
+private:
+	ID3D11Buffer* m_PointsBuffer = nullptr;
+	ID3D11ShaderResourceView* m_PointsSRV = nullptr;
+
+	const int m_MaxPoints = 256;
 };
