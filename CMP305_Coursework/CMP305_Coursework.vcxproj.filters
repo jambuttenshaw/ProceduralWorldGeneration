@@ -181,12 +181,6 @@
     <FxCompile Include="shaders\terrain_ps.hlsl">
       <Filter>Shaders\Terrain</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\terrain_hs.hlsl">
-      <Filter>Shaders\Terrain</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\terrain_ds.hlsl">
-      <Filter>Shaders\Terrain</Filter>
-    </FxCompile>
     <FxCompile Include="shaders\ridgeNoise_cs.hlsl">
       <Filter>Shaders\Compute</Filter>
     </FxCompile>
@@ -204,6 +198,9 @@
     </FxCompile>
     <FxCompile Include="shaders\fullscreen_vs.hlsl">
       <Filter>Shaders\Water</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\voronoiBiomes_cs.hlsl">
+      <Filter>Shaders\Compute</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

@@ -343,6 +343,7 @@ IHeightmapFilter* App1::createFilterFromIndex(int index)
 	case 1: newFilter = new RidgeNoiseFilter(renderer->getDevice()); break;
 	case 2: newFilter = new WarpedSimpleNoiseFilter(renderer->getDevice()); break;
 	case 3: newFilter = new TerrainNoiseFilter(renderer->getDevice()); break;
+	case 4: newFilter = new BiomesFilter(renderer->getDevice()); break;
 	default: break;
 	}
 	assert(newFilter != nullptr);

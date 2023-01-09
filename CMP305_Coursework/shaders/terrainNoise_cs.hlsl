@@ -51,5 +51,7 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     float finalShape = continentShape + (mountainShape * mountainMask);
     
-    gHeightmap[dispatchThreadID.xy] = finalShape;
+    float4 v = gHeightmap[dispatchThreadID.xy];
+    v.r = finalShape;
+    gHeightmap[dispatchThreadID.xy] = v;
 }

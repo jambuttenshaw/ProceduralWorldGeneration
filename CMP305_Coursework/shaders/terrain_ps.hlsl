@@ -41,11 +41,21 @@ float3 calculateNormal(float2 pos)
     float2 topTex = pos - float2(0.0f, gTexelCellSpaceV);
     float2 bottomTex = pos + float2(0.0f, gTexelCellSpaceV);
 	
+    float thisY = heightmap.SampleLevel(heightmapSampler, pos, 0).r;
     float leftY = heightmap.SampleLevel(heightmapSampler, leftTex, 0).r;
     float rightY = heightmap.SampleLevel(heightmapSampler, rightTex, 0).r;
     float topY = heightmap.SampleLevel(heightmapSampler, topTex, 0).r;
     float bottomY = heightmap.SampleLevel(heightmapSampler, bottomTex, 0).r;
 	
+    if (leftTex.x < 0.0f)
+        leftY = 2.0f * thisY - rightY;
+    if (rightTex.x > 1.0f)
+        rightY = 2.0f * thisY - leftY;
+    if (bottomTex.y > 1.0f)
+        bottomY = 2.0f * thisY - topY;
+    if (topTex.y < 0.0f)
+        topY = 2.0f * thisY - bottomY;
+    
     float3 tangent = normalize(float3(2.0f * gWorldCellSpace, rightY - leftY, 0.0f));
     float3 bitangent = normalize(float3(0.0f, bottomY - topY, -2.0f * gWorldCellSpace));
     return normalize(cross(tangent, bitangent));
@@ -61,6 +71,8 @@ float4 calculateDiffuse(float3 lightDirection, float3 normal, float4 diffuse)
 
 float4 main(InputType input) : SV_TARGET
 {
+    return heightmap.SampleLevel(heightmapSampler, input.tex, 0);
+    
     float3 normal = calculateNormal(input.tex);
 	
     // lighting:

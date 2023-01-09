@@ -238,3 +238,25 @@ void TerrainNoiseSettings::LoadFromJson(const nlohmann::json& data)
 	if (data.contains("oceanFloorSmoothing")) OceanFloorSmoothing = data["oceanFloorSmoothing"];
 	if (data.contains("mountainBlend")) MountainBlend = data["mountainBlend"];
 }
+
+
+
+
+bool BiomeSettings::SettingsGUI()
+{
+	bool changed = false;
+	
+	changed |= BiomeNoiseSettings.SettingsGUI();
+
+	changed |= ImGui::DragInt("Max Biome", &MaxBiome, 0.01f);
+
+	return changed;
+}
+
+nlohmann::json BiomeSettings::Serialize() const
+{
+	return nlohmann::json();
+}
+void BiomeSettings::LoadFromJson(const nlohmann::json& data)
+{
+}

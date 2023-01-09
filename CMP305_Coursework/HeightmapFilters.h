@@ -75,6 +75,20 @@ struct TerrainNoiseSettings
 };
 
 
+struct BiomeSettings
+{
+	SimpleNoiseSettings BiomeNoiseSettings;
+
+	int MaxBiome = 1;
+
+	XMFLOAT3 Padding;
+
+	bool SettingsGUI();
+	nlohmann::json Serialize() const;
+	void LoadFromJson(const nlohmann::json& data);
+};
+
+
 // FILTER DEFINITIONS
 
 class SimpleNoiseFilter : public BaseHeightmapFilter<SimpleNoiseSettings>
@@ -118,4 +132,18 @@ public:
 	virtual ~TerrainNoiseFilter() = default;
 
 	inline virtual const char* Label() const override { return "Terrain Noise"; }
+};
+
+
+class BiomesFilter : public BaseHeightmapFilter<BiomeSettings>
+{
+public:
+	BiomesFilter(ID3D11Device* device)
+		: BaseHeightmapFilter(device, L"voronoiBiomes_cs.cso")
+	{
+		m_Settings.BiomeNoiseSettings.Persistence = 0.0f;
+	}
+	virtual ~BiomesFilter() = default;
+
+	inline virtual const char* Label() const override { return "Biomes"; }
 };

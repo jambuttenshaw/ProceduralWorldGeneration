@@ -66,7 +66,6 @@ private:
 	std::vector<GameObject> m_GameObjects;
 
 	std::vector<Heightmap*> m_Heightmaps;
-
 	std::map<size_t, Heightmap*> m_GOToHeightmap;
 	
 	Light* light;
@@ -77,8 +76,8 @@ private:
 
 	IHeightmapFilter* m_HeightmapFilter;
 	
-	std::array<const char*, 4> m_AllFilterNames = {
-		"Simple Noise", "Ridge Noise", "Warped Simple Noise", "Terrain Noise"
+	std::array<const char*, 5> m_AllFilterNames = {
+		"Simple Noise", "Ridge Noise", "Warped Simple Noise", "Terrain Noise", "Biomes"
 	};
 
 	char m_SaveFilePath[128];
