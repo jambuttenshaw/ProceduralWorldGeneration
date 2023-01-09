@@ -33,6 +33,8 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float2 uv = float2(dispatchThreadID.xy) / float2(heightmapDims - float2(1, 1));
     float2 pos = uv + offset;
     
+	float3 biome = gHeightmap[dispatchThreadID.xy].gba;
+    
     // apply warping
     pos += float2(SimpleNoise(pos + float2(17.13f, 23.7f), warpSettings),
                  SimpleNoise(pos - float2(17.13f, 23.7f), warpSettings));

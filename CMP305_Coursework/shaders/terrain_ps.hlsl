@@ -71,7 +71,10 @@ float4 calculateDiffuse(float3 lightDirection, float3 normal, float4 diffuse)
 
 float4 main(InputType input) : SV_TARGET
 {
-    return heightmap.SampleLevel(heightmapSampler, input.tex, 0);
+	float3 c = heightmap.SampleLevel(heightmapSampler, input.tex, 0).gba;
+    
+	float d = lerp(c.r / 3.0f, c.g / 3.0f, c.b);
+	return float4(d.xxx, 1);
     
     float3 normal = calculateNormal(input.tex);
 	

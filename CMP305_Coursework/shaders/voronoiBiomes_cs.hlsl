@@ -24,7 +24,8 @@ cbuffer HeightmapSettingsBuffer : register(b1)
 	int biomeSeed;
 	int numBiomeTypes;
 	
-    float padding0;
+    float transitionThreshold;
+	SimpleNoiseSettings transitionNoiseSettings;
 }
 
 
@@ -48,11 +49,30 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 		if (dist < minDist)
 		{
 			minDist = dist;
+			
 			biomeType = gVoronoiPoints[i].type;
 		}
 	}
+	
+	float nextMinDist = 1e10f;
+	int nextBiomeType = gVoronoiPoints[0].type;
+	for (int j = 0; j < pointCount; j++)
+	{
+		float dist = distance(gVoronoiPoints[j].centre, pos);
+		int t = gVoronoiPoints[j].type;
+		if (dist < nextMinDist && dist > minDist && biomeType != t)
+		{
+			nextMinDist = dist;
+			nextBiomeType = t;
+		}
+	}
     
+	nextMinDist -= abs(SimpleNoise(pos, transitionNoiseSettings));
+	float transition = 0.5f * smoothstep(transitionThreshold, 1.0f, 1.0f - saturate(nextMinDist - minDist));
+	
 	float4 v = gHeightmap[dispatchThreadID.xy];
-	v.g = float(biomeType) / float(numBiomeTypes);
+	v.g = float(biomeType);
+	v.b = float(nextBiomeType);
+	v.a = transition;
 	gHeightmap[dispatchThreadID.xy] = v;
 }

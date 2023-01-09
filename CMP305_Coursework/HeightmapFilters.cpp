@@ -256,7 +256,12 @@ bool VoronoiBiomeSettings::SettingsGUI()
 		NumBiomeTypes = max(1, NumBiomeTypes);
 		changed = true;
 	}
-		
+	changed |= ImGui::SliderFloat("Transition Threshold", &TransitionThreshold, 0.0f, 1.0f);
+	if (ImGui::TreeNode("Transition Noise Settings"))
+	{
+		changed |= TransitionNoiseSettings.SettingsGUI();
+		ImGui::TreePop();
+	}
 	return changed;
 }
 
@@ -269,6 +274,8 @@ nlohmann::json VoronoiBiomeSettings::Serialize() const
 	serialized["numPoints"] = PointCount;
 	serialized["biomeSeed"] = BiomeSeed;
 	serialized["numBiomeTypes"] = NumBiomeTypes;
+	serialized["transitionThreshold"] = TransitionThreshold;
+	serialized["transitionNoiseSettings"] = TransitionNoiseSettings.Serialize();
 
 	return serialized;
 }
@@ -279,6 +286,8 @@ void VoronoiBiomeSettings::LoadFromJson(const nlohmann::json& data)
 	if (data.contains("numPoints")) PointCount = data["numPoints"];
 	if (data.contains("biomeSeed")) BiomeSeed = data["biomeSeed"];
 	if (data.contains("numBiomeTypes")) NumBiomeTypes = data["numBiomeTypes"];
+	if (data.contains("transitionThreshold")) TransitionThreshold = data["transitionThreshold"];
+	if (data.contains("transitionNoiseSettings")) TransitionNoiseSettings.LoadFromJson(data["transitionNoiseSettings"]);
 }
 
 VoronoiBiomesFilter::VoronoiBiomesFilter(ID3D11Device* device)

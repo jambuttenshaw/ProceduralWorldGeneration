@@ -83,7 +83,8 @@ struct VoronoiBiomeSettings
 	int PointCount = 4;
 	int BiomeSeed = 0;
 	int NumBiomeTypes = 4;
-	float Padding;
+	float TransitionThreshold = 0.95f;
+	SimpleNoiseSettings TransitionNoiseSettings;
 
 	bool SettingsGUI();
 	nlohmann::json Serialize() const;
