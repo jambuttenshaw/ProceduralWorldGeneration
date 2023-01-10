@@ -20,6 +20,7 @@
 #include <array>
 
 class IHeightmapFilter;
+class BiomeGenerator;
 
 
 class App1 : public BaseApplication
@@ -76,6 +77,8 @@ private:
 
 	IHeightmapFilter* m_HeightmapFilter = nullptr;
 	IHeightmapFilter* m_BiomeFilter = nullptr;
+
+	BiomeGenerator* m_BiomeGenerator = nullptr;
 	
 	std::array<const char*, 4> m_AllFilterNames = {
 		"Simple Noise", "Ridge Noise", "Warped Simple Noise", "Terrain Noise"

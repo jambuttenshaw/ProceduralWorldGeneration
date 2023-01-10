@@ -93,6 +93,9 @@
     <ClCompile Include="Heightmap.cpp">
       <Filter>Heightmap</Filter>
     </ClCompile>
+    <ClCompile Include="BiomeGenerator.cpp">
+      <Filter>Heightmap</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App1.h">
@@ -149,10 +152,10 @@
     <ClInclude Include="UnlitShader.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="GameObject.h">
-      <Filter>Utility</Filter>
-    </ClInclude>
     <ClInclude Include="Heightmap.h">
+      <Filter>Heightmap</Filter>
+    </ClInclude>
+    <ClInclude Include="BiomeGenerator.h">
       <Filter>Heightmap</Filter>
     </ClInclude>
   </ItemGroup>

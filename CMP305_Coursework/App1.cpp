@@ -5,6 +5,8 @@
 #include "HeightmapFilters.h"
 #include "SerializationHelper.h"
 
+#include "BiomeGenerator.h"
+
 
 App1::App1()
 {
@@ -49,6 +51,10 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	light->setDirection(lightDir.x, lightDir.y, lightDir.z);
 
 	m_BiomeFilter = new VoronoiBiomesFilter(renderer->getDevice());
+
+	m_BiomeGenerator = new BiomeGenerator(0);
+	m_BiomeGenerator->GenerateBiomeMap();
+	m_BiomeGenerator->CreateDebugTexture(renderer->getDevice());
 
 	if (m_LoadOnOpen)
 	{
