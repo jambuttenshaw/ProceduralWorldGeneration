@@ -1,6 +1,9 @@
 #pragma once
 
 #include "nlohmann/json.hpp"
+#include <DirectXMath.h>
+
+using namespace DirectX;
 
 // SETTINGS DEFINITIONS
 // these structs must EXACTLY match the HeightmapSettingsBuffer cbuffer in the filters respective compute shader
@@ -15,7 +18,7 @@ struct SimpleNoiseSettings
 	float VerticalShift = 0.0f;
 	int Octaves = 4;
 	// 16 bytes
-	DirectX::XMFLOAT2 Offset{ 0.0f, 0.0f };
+	XMFLOAT2 Offset{ 0.0f, 0.0f };
 	float Persistence = 0.5f;
 	float Lacunarity = 2.0f;
 
@@ -32,7 +35,7 @@ struct RidgeNoiseSettings
 	float VerticalShift = 0.0f;
 	int Octaves = 8;
 	// 16 bytes
-	DirectX::XMFLOAT2 Offset{ 0.0f, 0.0f };
+	XMFLOAT2 Offset{ 0.0f, 0.0f };
 	float Persistence = 0.6f;
 	float Lacunarity = 2.2f;
 	// 16 bytes

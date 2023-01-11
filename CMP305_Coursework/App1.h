@@ -19,7 +19,7 @@
 
 #include <array>
 
-class IHeightmapFilter;
+class HeightmapFilter;
 class BiomeGenerator;
 
 
@@ -41,13 +41,9 @@ protected:
 	void worldPass();
 	void waterPass();
 
-	bool addTerrainFilterMenu();
-
 	void applyFilterStack();
 
 	void createTerrain(const XMFLOAT3& pos);
-
-	IHeightmapFilter* createFilterFromIndex(int index);
 
 	void saveSettings(const std::string& file);
 	void loadSettings(const std::string& file);
@@ -75,14 +71,9 @@ private:
 	XMFLOAT3 lightSpecular{ 0.2f, 0.2f, 0.2f };
 	XMFLOAT3 lightDir{ 0.7f, -0.7f, 0.7f };
 
-	IHeightmapFilter* m_HeightmapFilter = nullptr;
-
 	BiomeGenerator* m_BiomeGenerator = nullptr;
+	HeightmapFilter* m_HeightmapFilter = nullptr;
 	
-	std::array<const char*, 4> m_AllFilterNames = {
-		"Simple Noise", "Ridge Noise", "Warped Simple Noise", "Terrain Noise"
-	};
-
 	char m_SaveFilePath[128];
 	bool m_LoadOnOpen = true;
 	bool m_SaveOnExit = false;

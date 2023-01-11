@@ -169,6 +169,7 @@
     <ClCompile Include="BiomeGenerator.cpp" />
     <ClCompile Include="CylinderMeshT.cpp" />
     <ClCompile Include="Heightmap.cpp" />
+    <ClCompile Include="HeightmapFilter.cpp" />
     <ClCompile Include="InstancedCubeMesh.cpp" />
     <ClCompile Include="InstanceShader.cpp" />
     <ClCompile Include="LightShader.cpp" />
@@ -187,11 +188,10 @@
   <ItemGroup>
     <ClInclude Include="App1.h" />
     <ClInclude Include="BaseFullScreenShader.h" />
-    <ClInclude Include="BaseHeightmapFilter.h" />
+    <ClInclude Include="HeightmapFilter.h" />
     <ClInclude Include="BiomeGenerator.h" />
     <ClInclude Include="CylinderMeshT.h" />
     <ClInclude Include="Heightmap.h" />
-    <ClInclude Include="HeightmapFilters.h" />
     <ClInclude Include="InstancedCubeMesh.h" />
     <ClInclude Include="InstanceShader.h" />
     <ClInclude Include="LightShader.h" />

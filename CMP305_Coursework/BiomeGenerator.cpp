@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "imGUI/imgui.h"
+#include "SerializationHelper.h"
 
 BiomeGenerator::BiomeGenerator(unsigned int seed)
 	: m_RNG(seed), m_Chance(1, 100)
@@ -10,12 +12,12 @@ BiomeGenerator::BiomeGenerator(unsigned int seed)
 	// create biomes
 	m_AllBiomes.clear();
 	m_AllBiomes.push_back({ "Ocean",			BIOME_TYPE_OCEAN, BIOME_TEMP_TEMPERATE, false, 1 });
-	m_AllBiomes.push_back({ "Plains",			BIOME_TYPE_LAND,  BIOME_TEMP_TEMPERATE, false, 3 });
-	m_AllBiomes.push_back({ "Mountains",		BIOME_TYPE_LAND,  BIOME_TEMP_TEMPERATE, true,  1 });
-	m_AllBiomes.push_back({ "Desert",			BIOME_TYPE_LAND,  BIOME_TEMP_WARM,		false, 3 });
-	m_AllBiomes.push_back({ "Desert Hills",		BIOME_TYPE_LAND,  BIOME_TEMP_WARM,		true,  1 });
-	m_AllBiomes.push_back({ "Tundra",			BIOME_TYPE_LAND,  BIOME_TEMP_COLD,		false, 2 });
-	m_AllBiomes.push_back({ "Snowy Mountains",	BIOME_TYPE_LAND,  BIOME_TEMP_COLD,		true,  1 });
+	m_AllBiomes.push_back({ "Plains",			BIOME_TYPE_LAND,  BIOME_TEMP_TEMPERATE, false, 1 });
+	m_AllBiomes.push_back({ "Mountains",		BIOME_TYPE_LAND,  BIOME_TEMP_TEMPERATE, true,  0 });
+	m_AllBiomes.push_back({ "Desert",			BIOME_TYPE_LAND,  BIOME_TEMP_WARM,		false, 0 });
+	m_AllBiomes.push_back({ "Desert Hills",		BIOME_TYPE_LAND,  BIOME_TEMP_WARM,		true,  0 });
+	m_AllBiomes.push_back({ "Tundra",			BIOME_TYPE_LAND,  BIOME_TEMP_COLD,		false, 0 });
+	m_AllBiomes.push_back({ "Snowy Mountains",	BIOME_TYPE_LAND,  BIOME_TEMP_COLD,		true,  0 });
 
 	// process biome list
 	GetAllBiomesWithTemperature(m_ColdBiomes, BIOME_TEMP_COLD);
@@ -31,6 +33,62 @@ BiomeGenerator::~BiomeGenerator()
 {
 	if (m_BiomeMap) delete m_BiomeMap;
 	if (m_TemperatureMap) delete m_TemperatureMap;
+}
+
+bool BiomeGenerator::SettingsGUI()
+{
+	bool changed = false;
+
+	ImGui::Text("Biome map size: %d", m_BiomeMapSize);
+	ImGui::Text("Mapping:");
+	changed |= ImGui::DragFloat2("Top Left", &m_BiomeMapTopLeft.x, 0.01f);
+	changed |= ImGui::DragFloat("Scale", &m_BiomeMapScale, 0.01f);
+	
+	ImGui::Text("Biome Settings:");
+	int biomeIndex = 0;
+	for (auto& biome : m_AllBiomes)
+	{
+		if (ImGui::TreeNode(biome.name))
+		{
+			changed |= m_GenerationSettings[biomeIndex].SettingsGUI();
+			ImGui::TreePop();
+		}
+		biomeIndex++;
+	}
+
+	return changed;
+}
+
+nlohmann::json BiomeGenerator::Serialize() const
+{
+	nlohmann::json serialized;
+
+	serialized["biomeMapTopLeft"] = SerializationHelper::SerializeFloat2(m_BiomeMapTopLeft);
+	serialized["biomeMapScale"] = m_BiomeMapScale;
+
+	serialized["generationSettings"] = nlohmann::json::array();
+	for (int i = 0; i < m_AllBiomes.size(); i++)
+	{
+		serialized["generationSettings"].push_back(m_GenerationSettings[i].Serialize());
+	}
+
+	return serialized;
+}
+
+void BiomeGenerator::LoadFromJson(const nlohmann::json& data)
+{
+	if (data.contains("biomeMapTopLeft")) SerializationHelper::LoadFloat2FromJson(&m_BiomeMapTopLeft, data["biomeMapTopLeft"]);
+	if (data.contains("biomeMapScale")) m_BiomeMapScale = data["biomeMapScale"];
+
+	if (data.contains("generationSettings"))
+	{
+		int index = 0;
+		for (auto& biome : data["generationSettings"])
+		{
+			m_GenerationSettings[index].LoadFromJson(biome);
+			index++;
+		}
+	}
 }
 
 void BiomeGenerator::GenerateBiomeMap(ID3D11Device* device)
@@ -167,7 +225,8 @@ void BiomeGenerator::CreateTemperatures(int** tempMapPtr, int* biomeMap, size_t 
 			if (biome != BIOME_TYPE_OCEAN)
 			{
 				int r = m_Chance(m_RNG);
-				if (r <= 66)
+				//if (r <= 66)
+				if (true)
 					temperature = BIOME_TEMP_TEMPERATE;
 				else if (r <= 83)
 					temperature = BIOME_TEMP_COLD;
@@ -424,11 +483,12 @@ void BiomeGenerator::CreateGenerationSettingsBuffer(ID3D11Device* device)
 
 void BiomeGenerator::UpdateBuffers(ID3D11DeviceContext* deviceContext)
 {
+	HRESULT hr;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 
-	HRESULT hr = deviceContext->Map(m_GenerationSettingsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	hr = deviceContext->Map(m_GenerationSettingsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	assert(hr == S_OK);
-	memcpy(mappedResource.pData, &m_GenerationSettingsBuffer, sizeof(m_GenerationSettingsBuffer));
+	memcpy(mappedResource.pData, &m_GenerationSettings, sizeof(TerrainNoiseSettings) * MAX_BIOMES);
 	deviceContext->Unmap(m_GenerationSettingsBuffer, 0);
 
 	hr = deviceContext->Map(m_BiomeMappingBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -436,5 +496,6 @@ void BiomeGenerator::UpdateBuffers(ID3D11DeviceContext* deviceContext)
 	BiomeMappingBufferType* dataPtr = reinterpret_cast<BiomeMappingBufferType*>(mappedResource.pData);
 	dataPtr->biomeMapTopleft = m_BiomeMapTopLeft;
 	dataPtr->biomeMapScale = m_BiomeMapScale;
-	deviceContext->Unmap(m_GenerationSettingsBuffer, 0);
+	dataPtr->biomeMapResolution = static_cast<unsigned int>(m_BiomeMapSize);
+	deviceContext->Unmap(m_BiomeMappingBuffer, 0);
 }

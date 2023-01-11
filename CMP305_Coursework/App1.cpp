@@ -2,7 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "HeightmapFilters.h"
+#include "HeightmapFilter.h"
 #include "SerializationHelper.h"
 
 #include "BiomeGenerator.h"
@@ -52,6 +52,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	m_BiomeGenerator = new BiomeGenerator(0);
 	m_BiomeGenerator->GenerateBiomeMap(renderer->getDevice());
+	m_HeightmapFilter = new HeightmapFilter(renderer->getDevice(), L"terrainNoise_cs.cso");
 
 	if (m_LoadOnOpen)
 	{
@@ -284,24 +285,11 @@ void App1::gui()
 
 	if (ImGui::CollapsingHeader("Terrain Filters"))
 	{
-		if (ImGui::TreeNode("Heightmap Filter"))
+		if (ImGui::TreeNode("Biome Generator"))
 		{
-			int currentHeightmapFilter = 0;
-			for (auto& name : m_AllFilterNames)
+			if (m_BiomeGenerator)
 			{
-				if (name == m_HeightmapFilter->Label())
-					break;
-				currentHeightmapFilter++;
-			}
-			if (ImGui::Combo("Filter", &currentHeightmapFilter, m_AllFilterNames.data(), static_cast<int>(m_AllFilterNames.size())))
-			{
-				delete m_HeightmapFilter;
-				m_HeightmapFilter = createFilterFromIndex(currentHeightmapFilter);
-			}
-
-			if (m_HeightmapFilter)
-			{
-				regenerateTerrain |= m_HeightmapFilter->SettingsGUI();
+				regenerateTerrain |= m_BiomeGenerator->SettingsGUI();
 			}
 			ImGui::TreePop();
 		}
@@ -309,13 +297,6 @@ void App1::gui()
 		{
 			m_TerrainShader->GUI();
 
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNode("Biome Generator"))
-		{
-			if (m_BiomeGenerator)
-			{
-			}
 			ImGui::TreePop();
 		}
 	}
@@ -327,6 +308,7 @@ void App1::gui()
 
 void App1::applyFilterStack()
 {
+	m_BiomeGenerator->UpdateBuffers(renderer->getDeviceContext());
 	for (auto heightmap : m_Heightmaps)
 	{
 		if (m_HeightmapFilter)
@@ -346,28 +328,12 @@ void App1::createTerrain(const XMFLOAT3& pos)
 	m_GOToHeightmap.insert({ m_GameObjects.size() - 1, newHeightmap });
 }
 
-IHeightmapFilter* App1::createFilterFromIndex(int index)
-{
-	IHeightmapFilter* newFilter = nullptr;
-	switch (index)
-	{
-	case 0: newFilter = new SimpleNoiseFilter(renderer->getDevice()); break;
-	case 1: newFilter = new RidgeNoiseFilter(renderer->getDevice()); break;
-	case 2: newFilter = new WarpedSimpleNoiseFilter(renderer->getDevice()); break;
-	case 3: newFilter = new TerrainNoiseFilter(renderer->getDevice()); break;
-	default: break;
-	}
-	assert(newFilter != nullptr);
-
-	return newFilter;
-}
 
 void App1::saveSettings(const std::string& file)
 {
 	nlohmann::json serialized;
 
-	// serialize filter data
-	serialized["heightmapFilter"] = m_HeightmapFilter->Serialize();
+	serialized["biomeGenerator"] = m_BiomeGenerator->Serialize();
 
 	// serialize light settings
 	serialized["lightDir"] = SerializationHelper::SerializeFloat3(lightDir);
@@ -388,35 +354,13 @@ void App1::saveSettings(const std::string& file)
 
 void App1::loadSettings(const std::string& file)
 {
-	// clear out existing settings
-	delete m_HeightmapFilter;
-
 	// load data from file
 	std::ifstream infile(file);
 	nlohmann::json data;
 	infile >> data;
 	infile.close();
 
-	// construct objects from data
-	if (data.contains("heightmapFilter"))
-	{
-		auto filter = data["heightmapFilter"];
-		if (filter.contains("name"))
-		{
-			// work out the filter index
-			int index = 0;
-			for (const auto& name : m_AllFilterNames)
-			{
-				if (name == filter["name"]) break;
-				index++;
-			}
-			if (index != m_AllFilterNames.size())
-			{
-				m_HeightmapFilter = createFilterFromIndex(index);
-				m_HeightmapFilter->LoadFromJson(filter);
-			}
-		}
-	}
+	if (data.contains("biomeGenerator")) m_BiomeGenerator->LoadFromJson(data["biomeGenerator"]);
 
 	if (data.contains("lightDir")) SerializationHelper::LoadFloat3FromJson(&lightDir, data["lightDir"]);
 	if (data.contains("lightDiffuse")) SerializationHelper::LoadFloat3FromJson(&lightDiffuse, data["lightDiffuse"]);

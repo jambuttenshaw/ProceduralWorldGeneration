@@ -96,6 +96,9 @@
     <ClCompile Include="NoiseSettings.cpp">
       <Filter>Heightmap</Filter>
     </ClCompile>
+    <ClCompile Include="HeightmapFilter.cpp">
+      <Filter>Heightmap</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App1.h">
@@ -107,7 +110,7 @@
     <ClInclude Include="BaseFullScreenShader.h">
       <Filter>Water</Filter>
     </ClInclude>
-    <ClInclude Include="BaseHeightmapFilter.h">
+    <ClInclude Include="HeightmapFilter.h">
       <Filter>Heightmap</Filter>
     </ClInclude>
     <ClInclude Include="SerializationHelper.h">
@@ -118,9 +121,6 @@
     </ClInclude>
     <ClInclude Include="TerrainMesh.h">
       <Filter>Terrain</Filter>
-    </ClInclude>
-    <ClInclude Include="HeightmapFilters.h">
-      <Filter>Heightmap</Filter>
     </ClInclude>
     <ClInclude Include="LightShader.h">
       <Filter>Rendering</Filter>

@@ -13,11 +13,7 @@ cbuffer WorldBuffer : register(b0)
     float2 offset;
     float2 padding0;
 }
-cbuffer HeightmapSettingsBuffer : register(b1)
-{
-    TerrainNoiseSettings terrainSettings;
-}
-cbuffer BiomeMappingBuffer : register(b2)
+cbuffer BiomeMappingBuffer : register(b1)
 {
     float2 biomeMapTopLeft;
     float biomeMapScale;
@@ -39,6 +35,7 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     uint2 biomeMapUV = (biomeMapResolution - 1) * (pos - biomeMapTopLeft) / biomeMapScale;
     int biome = asint(gBiomeMap.Load(uint3(biomeMapUV, 0.0f)).r);
+    TerrainNoiseSettings terrainSettings = gGenerationSettingsBuffer[biome];
     
     // apply warping
     pos += float2(SimpleNoise(pos + float2(17.13f, 23.7f), terrainSettings.warpSettings),
@@ -59,7 +56,6 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float finalShape = continentShape + (mountainShape * mountainMask);
     
     float4 v = gHeightmap[dispatchThreadID.xy];
-    //v.r = finalShape;
-    v.r = biome;
+    v.r = finalShape;
     gHeightmap[dispatchThreadID.xy] = v;
 }

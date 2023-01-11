@@ -1,4 +1,4 @@
-#include "HeightmapFilters.h"
+#include "NoiseSettings.h"
 
 #include "SerializationHelper.h"
 #include "imGUI/imgui.h"

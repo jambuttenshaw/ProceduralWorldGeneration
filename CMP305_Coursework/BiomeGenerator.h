@@ -51,6 +51,10 @@ public:
 	BiomeGenerator(unsigned int seed);
 	~BiomeGenerator();
 
+	bool SettingsGUI();
+	nlohmann::json Serialize() const;
+	void LoadFromJson(const nlohmann::json& data);
+
 	void GenerateBiomeMap(ID3D11Device* device);
 
 	inline ID3D11ShaderResourceView* GetBiomeMapSRV() const { return m_BiomeMapSRV; }
@@ -60,6 +64,8 @@ public:
 	inline ID3D11Buffer* GetBiomeMappingBuffer() const { return m_BiomeMappingBuffer; }
 	
 	inline ID3D11ShaderResourceView* GetGenerationSettingsSRV() const { return m_GenerationSettingsView; }
+
+	void UpdateBuffers(ID3D11DeviceContext* deviceContext);
 
 private:
 	// land/ocean balance
@@ -83,7 +89,6 @@ private:
 
 	void CreateBiomeMapTexture(ID3D11Device* device);
 	void CreateGenerationSettingsBuffer(ID3D11Device* device);
-	void UpdateBuffers(ID3D11DeviceContext* deviceContext);
 
 	inline bool Chance(int percent) { return m_Chance(m_RNG) <= percent; }
 
