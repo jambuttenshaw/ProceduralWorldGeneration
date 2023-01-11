@@ -65,7 +65,7 @@ void BiomeGenerator::GenerateBiomeMap(ID3D11Device* device)
 
 	// create resources used by GPU to generate the terrain
 	CreateBiomeMapTexture(device);
-	CreateGenerationBuffer(device);
+	CreateGenerationSettingsBuffer(device);
 }
 
 
@@ -346,13 +346,13 @@ void BiomeGenerator::CreateBiomeMapTexture(ID3D11Device* device)
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
 
-	D3D11_SUBRESOURCE_DATA pData;
-	pData.pSysMem = m_BiomeMap;
-	pData.SysMemPitch = static_cast<unsigned int>(sizeof(int) * m_BiomeMapSize);
-	pData.SysMemSlicePitch = 0;
+	D3D11_SUBRESOURCE_DATA initialData;
+	initialData.pSysMem = m_BiomeMap;
+	initialData.SysMemPitch = static_cast<unsigned int>(sizeof(int) * m_BiomeMapSize);
+	initialData.SysMemSlicePitch = 0;
 
 	ID3D11Texture2D* tex = nullptr;
-	HRESULT hr = device->CreateTexture2D(&desc, &pData, &tex);
+	HRESULT hr = device->CreateTexture2D(&desc, &initialData, &tex);
 	assert(hr == S_OK);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -377,9 +377,23 @@ void BiomeGenerator::CreateBiomeMapTexture(ID3D11Device* device)
 
 	hr = device->CreateSamplerState(&samplerDesc, &m_BiomeMapSampler);
 	assert(hr == S_OK);
+
+	D3D11_BUFFER_DESC bufferDesc;
+	bufferDesc.ByteWidth = sizeof(BiomeMappingBufferType);
+	bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bufferDesc.MiscFlags = 0;
+	bufferDesc.StructureByteStride = 0;
+
+	BiomeMappingBufferType bmbt{ m_BiomeMapTopLeft, m_BiomeMapScale, static_cast<unsigned int>(m_BiomeMapSize) };
+	initialData.pSysMem = &bmbt;
+
+	hr = device->CreateBuffer(&bufferDesc, &initialData, &m_BiomeMappingBuffer);
+	assert(hr == S_OK);
 }
 
-void BiomeGenerator::CreateGenerationBuffer(ID3D11Device* device)
+void BiomeGenerator::CreateGenerationSettingsBuffer(ID3D11Device* device)
 {
 	// create biome data buffer
 	D3D11_BUFFER_DESC bufferDesc;
@@ -408,11 +422,19 @@ void BiomeGenerator::CreateGenerationBuffer(ID3D11Device* device)
 	assert(hr == S_OK);
 }
 
-void BiomeGenerator::UpdateGenerationBuffer(ID3D11DeviceContext* deviceContext)
+void BiomeGenerator::UpdateBuffers(ID3D11DeviceContext* deviceContext)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
+
 	HRESULT hr = deviceContext->Map(m_GenerationSettingsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	assert(hr == S_OK);
 	memcpy(mappedResource.pData, &m_GenerationSettingsBuffer, sizeof(m_GenerationSettingsBuffer));
+	deviceContext->Unmap(m_GenerationSettingsBuffer, 0);
+
+	hr = deviceContext->Map(m_BiomeMappingBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	assert(hr == S_OK);
+	BiomeMappingBufferType* dataPtr = reinterpret_cast<BiomeMappingBufferType*>(mappedResource.pData);
+	dataPtr->biomeMapTopleft = m_BiomeMapTopLeft;
+	dataPtr->biomeMapScale = m_BiomeMapScale;
 	deviceContext->Unmap(m_GenerationSettingsBuffer, 0);
 }

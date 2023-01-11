@@ -36,7 +36,7 @@ public:
 template <typename SettingsType>
 class BaseHeightmapFilter : public IHeightmapFilter
 {
-	struct MatrixBufferType
+	struct WorldBufferType
 	{
 		XMFLOAT2 offset;
 		XMFLOAT2 padding;
@@ -72,15 +72,15 @@ public:
 		hr = m_Device->CreateBuffer(&bufferDesc, NULL, &m_SettingsBuffer);
 		assert(hr == S_OK);
 
-		bufferDesc.ByteWidth = sizeof(MatrixBufferType);
-		hr = m_Device->CreateBuffer(&bufferDesc, NULL, &m_MatrixBuffer);
+		bufferDesc.ByteWidth = sizeof(WorldBufferType);
+		hr = m_Device->CreateBuffer(&bufferDesc, NULL, &m_WorldBuffer);
 		assert(hr == S_OK);
 	}
 
 	virtual ~BaseHeightmapFilter()
 	{
 		if (m_ComputeShader) m_ComputeShader->Release();
-		if (m_MatrixBuffer) m_SettingsBuffer->Release();
+		if (m_WorldBuffer) m_WorldBuffer->Release();
 		if (m_SettingsBuffer) m_SettingsBuffer->Release();
 	}
 
@@ -88,21 +88,23 @@ public:
 	{
 		ID3D11UnorderedAccessView* uav = heightmap->GetUAV();
 		deviceContext->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);
-
+		ID3D11ShaderResourceView* srvs[2] = { biomeGenerator->GetBiomeMapSRV(), biomeGenerator->GetGenerationSettingsSRV() };
+		deviceContext->CSSetShaderResources(0, 2, srvs);
+		
 		// update data in constant buffers
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
 
-		deviceContext->Map(m_MatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-		MatrixBufferType* dataPtr = reinterpret_cast<MatrixBufferType*>(mappedResource.pData);
+		deviceContext->Map(m_WorldBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		WorldBufferType* dataPtr = reinterpret_cast<WorldBufferType*>(mappedResource.pData);
 		dataPtr->offset = heightmap->GetOffset();
-		deviceContext->Unmap(m_MatrixBuffer, 0);
+		deviceContext->Unmap(m_WorldBuffer, 0);
 
 		deviceContext->Map(m_SettingsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 		memcpy(mappedResource.pData, &m_Settings, sizeof(m_Settings));
 		deviceContext->Unmap(m_SettingsBuffer, 0);
 
-		ID3D11Buffer* cscbs[2] = { m_MatrixBuffer, m_SettingsBuffer };
-		deviceContext->CSSetConstantBuffers(0, 2, cscbs);
+		ID3D11Buffer* cscbs[3] = { m_WorldBuffer, m_SettingsBuffer, biomeGenerator->GetBiomeMappingBuffer() };
+		deviceContext->CSSetConstantBuffers(0, 3, cscbs);
 
 		deviceContext->CSSetShader(m_ComputeShader, nullptr, 0);
 
@@ -110,12 +112,15 @@ public:
 		unsigned int groupCount = (heightmap->GetResolution() + 15) / 16; // (fast ceiling of integer division)
 		deviceContext->Dispatch(groupCount, groupCount, 1);
 
+		// clean up
 		deviceContext->CSSetShader(nullptr, nullptr, 0);
 
 		ID3D11UnorderedAccessView* nullUAV = nullptr;
 		deviceContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
-		ID3D11Buffer* nullCB = nullptr;
-		deviceContext->CSSetConstantBuffers(0, 1, &nullCB);
+		ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
+		deviceContext->CSSetShaderResources(0, 2, nullSRVs);
+		ID3D11Buffer* nullCBs[3] = { nullptr, nullptr, nullptr };
+		deviceContext->CSSetConstantBuffers(0, 3, nullCBs);
 	}
 
 	virtual bool SettingsGUI() override
@@ -140,7 +145,7 @@ protected:
 
 	ID3D11ComputeShader* m_ComputeShader = nullptr;
 	
-	ID3D11Buffer* m_MatrixBuffer = nullptr;
+	ID3D11Buffer* m_WorldBuffer = nullptr;
 	ID3D11Buffer* m_SettingsBuffer = nullptr;
 	SettingsType m_Settings;
 };

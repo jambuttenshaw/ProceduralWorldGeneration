@@ -21,11 +21,16 @@ cbuffer TerrainBuffer : register(b1)
     float flatThreshold;
     float cliffThreshold;
     float steepnessSmoothing;
+    float padding1;
     
-    // mapping
-    float biomeMapScale;
-    float2 biomeMapTopLeft;
     float2 worldOffset;
+    float2 padding2;
+}
+cbuffer BiomeMappingBuffer : register(b2)
+{
+    float2 biomeMapTopLeft;
+    float biomeMapScale;
+    float padding3;
 };
 
 struct InputType
@@ -78,12 +83,7 @@ float4 calculateDiffuse(float3 lightDirection, float3 normal, float4 diffuse)
 }
 
 float4 main(InputType input) : SV_TARGET
-{
-    float2 biomeTex = (worldOffset + input.tex - biomeMapTopLeft) / biomeMapScale;
-    int biome = asint(biomeMap.Sample(biomeMapSampler, biomeTex).r);
-    float b = float(biome) / 6.0f;
-    return float4(b.xxx, 1.0f);
-    
+{    
     float3 normal = calculateNormal(input.tex);
 	
     // lighting:

@@ -31,11 +31,12 @@ private:
 		float flatThreshold;
 		float cliffThreshold;
 		float steepnessSmoothing;
+		float padding;
 
-		float biomeMapScale;
-		XMFLOAT2 biomeMapTopleft;
 		XMFLOAT2 worldOffset;
+		XMFLOAT2 padding1;
 	};
+
 
 public:
 	TerrainShader(ID3D11Device* device);
@@ -68,9 +69,9 @@ private:
 
 	ID3D11InputLayout* m_InputLayout = nullptr;
 
-	ID3D11Buffer* m_MatrixBuffer = nullptr;		// matrices to be sent to vertex shader
-	ID3D11Buffer* m_LightBuffer = nullptr;		// lighting data
-	ID3D11Buffer* m_TerrainBuffer = nullptr;	// terrain data
+	ID3D11Buffer* m_MatrixBuffer = nullptr;			// matrices to be sent to vertex shader
+	ID3D11Buffer* m_LightBuffer = nullptr;			// lighting data
+	ID3D11Buffer* m_TerrainBuffer = nullptr;		// terrain data
 
 	ID3D11SamplerState* m_HeightmapSampleState = nullptr;
 
@@ -78,8 +79,5 @@ private:
 	float m_FlatThreshold = 0.5f;
 	float m_CliffThreshold = 0.8f;
 	float m_SteepnessSmoothing = 0.1f;
-
-	XMFLOAT2 m_BiomeMapTopleft{ 0.0f, 0.0f };
-	float m_BiomeMapScale = 8.0f;
 };
 

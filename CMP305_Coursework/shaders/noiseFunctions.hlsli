@@ -33,6 +33,18 @@ struct RidgeNoiseSettings
     float padding0;
 };
 
+struct TerrainNoiseSettings
+{
+    SimpleNoiseSettings warpSettings;
+    SimpleNoiseSettings continentSettings;
+    RidgeNoiseSettings mountainSettings;
+    
+    float oceanDepthMultiplier;
+    float oceanFloorDepth;
+    float oceanFloorSmoothing;
+    float mountainBlend;
+};
+
 
 // NOISE FUNCTIONS
 

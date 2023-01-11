@@ -12,12 +12,6 @@ using namespace DirectX;
 #define MAX_BIOMES 16
 
 
-struct BiomeGenerationSettings
-{
-
-};
-
-
 class BiomeGenerator 
 {
 	enum BIOME_TYPE : int
@@ -46,6 +40,13 @@ class BiomeGenerator
 		// generation settings specific to this biome are stored in the Generation Settings buffer
 	};
 
+	struct BiomeMappingBufferType
+	{
+		XMFLOAT2 biomeMapTopleft;
+		float biomeMapScale;
+		unsigned int biomeMapResolution;
+	};
+
 public:
 	BiomeGenerator(unsigned int seed);
 	~BiomeGenerator();
@@ -54,9 +55,11 @@ public:
 
 	inline ID3D11ShaderResourceView* GetBiomeMapSRV() const { return m_BiomeMapSRV; }
 	inline size_t GetBiomeMapResolution() const { return m_BiomeMapSize; }
-	inline ID3D11ShaderResourceView* GetGenerationSettingsSRV() const { return m_GenerationSettingsView; }
 	inline size_t GetBiomeCount() const { return m_AllBiomes.size(); }
 	inline ID3D11SamplerState* GetBiomeMapSampler() const { return m_BiomeMapSampler; }
+	inline ID3D11Buffer* GetBiomeMappingBuffer() const { return m_BiomeMappingBuffer; }
+	
+	inline ID3D11ShaderResourceView* GetGenerationSettingsSRV() const { return m_GenerationSettingsView; }
 
 private:
 	// land/ocean balance
@@ -79,8 +82,8 @@ private:
 	void GetAllBiomesWithTemperature(std::vector<int>& out, BIOME_TEMP temperature);
 
 	void CreateBiomeMapTexture(ID3D11Device* device);
-	void CreateGenerationBuffer(ID3D11Device* device);
-	void UpdateGenerationBuffer(ID3D11DeviceContext* deviceContext);
+	void CreateGenerationSettingsBuffer(ID3D11Device* device);
+	void UpdateBuffers(ID3D11DeviceContext* deviceContext);
 
 	inline bool Chance(int percent) { return m_Chance(m_RNG) <= percent; }
 
@@ -105,4 +108,8 @@ private:
 
 	int* m_TemperatureMap = nullptr;
 	size_t m_TemperatureMapSize = -1;
+
+	ID3D11Buffer* m_BiomeMappingBuffer = nullptr;
+	XMFLOAT2 m_BiomeMapTopLeft{ 0, 0 };
+	float m_BiomeMapScale = 8.0f;
 };

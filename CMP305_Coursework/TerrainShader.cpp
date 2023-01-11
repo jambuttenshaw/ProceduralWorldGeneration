@@ -141,11 +141,7 @@ void TerrainShader::SetShaderParameters(ID3D11DeviceContext* deviceContext,
 		dataPtr->flatThreshold = m_FlatThreshold;
 		dataPtr->cliffThreshold = m_CliffThreshold;
 		dataPtr->steepnessSmoothing = m_SteepnessSmoothing;
-
-		dataPtr->biomeMapScale = m_BiomeMapScale;
-		dataPtr->biomeMapTopleft = m_BiomeMapTopleft;
 		dataPtr->worldOffset = heightmap->GetOffset();
-
 		deviceContext->Unmap(m_TerrainBuffer, 0);
 	}
 
@@ -154,8 +150,8 @@ void TerrainShader::SetShaderParameters(ID3D11DeviceContext* deviceContext,
 	deviceContext->VSSetShaderResources(0, 1, &heightmapSRV);
 	deviceContext->VSSetSamplers(0, 1, &m_HeightmapSampleState);
 
-	ID3D11Buffer* psCBs[] = { m_LightBuffer, m_TerrainBuffer };
-	deviceContext->PSSetConstantBuffers(0, 2, psCBs);
+	ID3D11Buffer* psCBs[] = { m_LightBuffer, m_TerrainBuffer, biomeGenerator->GetBiomeMappingBuffer() };
+	deviceContext->PSSetConstantBuffers(0, 3, psCBs);
 	ID3D11ShaderResourceView* psSRVs[] = { heightmapSRV, biomeGenerator->GetBiomeMapSRV() };
 	deviceContext->PSSetShaderResources(0, 2, psSRVs);
 	ID3D11SamplerState* psSamplers[] = { m_HeightmapSampleState, biomeGenerator->GetBiomeMapSampler() };
@@ -180,9 +176,6 @@ void TerrainShader::GUI()
 	ImGui::SliderFloat("Flat Threshold", &m_FlatThreshold, 0.0f, m_CliffThreshold);
 	ImGui::SliderFloat("Cliff Threshold", &m_CliffThreshold, m_FlatThreshold, 1.0f);
 	ImGui::SliderFloat("Steepness Smoothing", &m_SteepnessSmoothing, 0.0f, 0.2f);
-
-	ImGui::DragFloat("Biome Map Scale", &m_BiomeMapScale, 0.01f);
-	ImGui::DragFloat2("Biome Map Top Left", &m_BiomeMapTopleft.x, 0.01f);
 }
 
 nlohmann::json TerrainShader::Serialize() const

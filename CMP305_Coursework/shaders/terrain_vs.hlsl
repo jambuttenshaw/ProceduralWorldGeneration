@@ -9,6 +9,7 @@ cbuffer MatrixBuffer : register(b0)
 	matrix projectionMatrix;
 };
 
+
 struct InputType
 {
     float3 position : POSITION;
