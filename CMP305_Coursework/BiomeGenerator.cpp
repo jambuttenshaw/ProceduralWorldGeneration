@@ -7,66 +7,67 @@
 BiomeGenerator::BiomeGenerator(unsigned int seed)
 	: m_RNG(seed), m_Chance(1, 100)
 {
+	// create biomes
+	m_AllBiomes.clear();
+	m_AllBiomes.push_back({ "Ocean",			BIOME_TYPE_OCEAN, BIOME_TEMP_TEMPERATE, false, 1 });
+	m_AllBiomes.push_back({ "Plains",			BIOME_TYPE_LAND,  BIOME_TEMP_TEMPERATE, false, 3 });
+	m_AllBiomes.push_back({ "Mountains",		BIOME_TYPE_LAND,  BIOME_TEMP_TEMPERATE, true,  1 });
+	m_AllBiomes.push_back({ "Desert",			BIOME_TYPE_LAND,  BIOME_TEMP_WARM,		false, 3 });
+	m_AllBiomes.push_back({ "Desert Hills",		BIOME_TYPE_LAND,  BIOME_TEMP_WARM,		true,  1 });
+	m_AllBiomes.push_back({ "Tundra",			BIOME_TYPE_LAND,  BIOME_TEMP_COLD,		false, 2 });
+	m_AllBiomes.push_back({ "Snowy Mountains",	BIOME_TYPE_LAND,  BIOME_TEMP_COLD,		true,  1 });
+
+	// process biome list
+	GetAllBiomesWithTemperature(m_ColdBiomes, BIOME_TEMP_COLD);
+	GetAllBiomesWithTemperature(m_TemperateBiomes, BIOME_TEMP_TEMPERATE);
+	GetAllBiomesWithTemperature(m_WarmBiomes, BIOME_TEMP_WARM);
+
+	m_BiomesByTemp.insert(std::make_pair( BIOME_TEMP_COLD, &m_ColdBiomes ));
+	m_BiomesByTemp.insert(std::make_pair( BIOME_TEMP_TEMPERATE, &m_TemperateBiomes ));
+	m_BiomesByTemp.insert(std::make_pair( BIOME_TEMP_WARM, &m_WarmBiomes ));
 }
 
 BiomeGenerator::~BiomeGenerator()
 {
+	if (m_BiomeMap) delete m_BiomeMap;
+	if (m_TemperatureMap) delete m_TemperatureMap;
 }
 
-void BiomeGenerator::GenerateBiomeMap()
+void BiomeGenerator::GenerateBiomeMap(ID3D11Device* device)
 {
-	int* biomeMap = nullptr;
+	if (m_BiomeMap) delete m_BiomeMap;
+	if (m_TemperatureMap) delete m_TemperatureMap;
 
 	// start with a really small biome map; 4x4
-	size_t mapSize = 4;
-	biomeMap = new int[mapSize * mapSize];
+	m_BiomeMapSize = 4;
+	m_BiomeMap = new int[m_BiomeMapSize * m_BiomeMapSize];
 
 	// work out what will be land and what will be ocean
-	IslandsCA(&biomeMap, mapSize);
-	Zoom2x(&biomeMap, &mapSize);
-	AddIslandsCA(&biomeMap, mapSize);
-	Zoom2x(&biomeMap, &mapSize);
-	AddIslandsCA(&biomeMap, mapSize);
-	AddIslandsCA(&biomeMap, mapSize);
-	AddIslandsCA(&biomeMap, mapSize);
-	RemoveTooMuchOcean(&biomeMap, mapSize);
+	IslandsCA(&m_BiomeMap, m_BiomeMapSize);
+	Zoom2x(&m_BiomeMap, &m_BiomeMapSize);
+	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
+	Zoom2x(&m_BiomeMap, &m_BiomeMapSize);
+	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
+	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
+	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
+	RemoveTooMuchOcean(&m_BiomeMap, m_BiomeMapSize);
 
 	// decide on biome temperatures
-	CreateTemperatures(&biomeMap, mapSize);
-	TransitionTemperatures(&biomeMap, mapSize);
+	m_TemperatureMapSize = m_BiomeMapSize;
+	m_TemperatureMap = new int[m_TemperatureMapSize * m_TemperatureMapSize];
 
-	// temperature transitions
+	CreateTemperatures(&m_TemperatureMap, m_BiomeMap, m_TemperatureMapSize);
+	TransitionTemperatures(&m_TemperatureMap, m_TemperatureMapSize);
 
-	m_BiomeMap = biomeMap;
-	m_BiomeMapSize = mapSize;
+	// now select biomes based off of the temperatures
+	SelectBiomes(&m_BiomeMap, m_TemperatureMap, m_BiomeMapSize);
+
+
+	// create resources used by GPU to generate the terrain
+	CreateBiomeMapTexture(device);
+	CreateGenerationBuffer(device);
 }
 
-void BiomeGenerator::CreateDebugTexture(ID3D11Device* device)
-{
-	if (!m_BiomeMap) return;
-
-	D3D11_TEXTURE2D_DESC desc;
-	desc.Width =  static_cast<unsigned int>(m_BiomeMapSize);
-	desc.Height = static_cast<unsigned int>(m_BiomeMapSize);
-	desc.MipLevels = 1;
-	desc.ArraySize = 1;
-	desc.Format = DXGI_FORMAT_R32_SINT;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
-
-	D3D11_SUBRESOURCE_DATA pData;
-	pData.pSysMem = m_BiomeMap;
-	pData.SysMemPitch = static_cast<unsigned int>(sizeof(int) * m_BiomeMapSize);
-	pData.SysMemSlicePitch = 0;
-
-	ID3D11Texture2D* tex = nullptr;
-	HRESULT hr = device->CreateTexture2D(&desc, &pData, &tex);
-	assert(hr == S_OK);
-}
 
 void BiomeGenerator::IslandsCA(int** biomeMapPtr, size_t mapSize)
 {
@@ -75,7 +76,10 @@ void BiomeGenerator::IslandsCA(int** biomeMapPtr, size_t mapSize)
 
 	for (int i = 0; i < mapSize * mapSize; i++)
 	{
-		newBiomeMap[i] = Chance(20);
+		if (Chance(20))
+			newBiomeMap[i] = BIOME_TYPE_LAND;
+		else
+			newBiomeMap[i] = BIOME_TYPE_OCEAN;
 	}
 
 	delete[] biomeMap;
@@ -93,25 +97,25 @@ void BiomeGenerator::AddIslandsCA(int** biomeMapPtr, size_t mapSize)
 		{
 			int sample = biomeMap[y * mapSize + x];
 			
-			if (sample == 0)
+			if (sample == BIOME_TYPE_OCEAN)
 			{
 				// process oceans
 
 				// if ocean is next to at least 1 land tile, then theres a chance it will also become land
-				if (CountNeighboursEqual(x, y, 1, biomeMap, mapSize) > 0)
+				if (CountNeighboursEqual(x, y, BIOME_TYPE_LAND, biomeMap, mapSize) > 0)
 				{
 					if (Chance(30))
-						sample = 1;
+						sample = BIOME_TYPE_LAND;
 				}
 			}
-			else if (sample == 1)
+			else if (sample == BIOME_TYPE_LAND)
 			{
 				// process land
-				// if land is next to at least 1 ocean tile, then theres a chance it will become ocean
-				if (CountNeighboursEqual(x, y, 0, biomeMap, mapSize) == 1)
+				// if land is next to more than 1 ocean tile, then theres a chance it will become ocean
+				if (CountNeighboursEqual(x, y, BIOME_TYPE_OCEAN, biomeMap, mapSize) > 1)
 				{
 					if (Chance(15))
-						sample = 0;
+						sample = BIOME_TYPE_OCEAN;
 				}
 			}
 
@@ -134,10 +138,10 @@ void BiomeGenerator::RemoveTooMuchOcean(int** biomeMapPtr, size_t mapSize)
 		{
 			int sample = biomeMap[y * mapSize + x];
 
-			if (CountNeighboursEqual(x, y, 0, biomeMap, mapSize) == 4)
+			if (CountNeighboursEqual(x, y, BIOME_TYPE_OCEAN, biomeMap, mapSize) == 4)
 			{
 				if (Chance(25))
-					sample = 1;
+					sample = BIOME_TYPE_LAND;
 			}
 
 			newBiomeMap[y * mapSize + x] = sample;
@@ -148,37 +152,65 @@ void BiomeGenerator::RemoveTooMuchOcean(int** biomeMapPtr, size_t mapSize)
 	*biomeMapPtr = newBiomeMap;
 }
 
-void BiomeGenerator::CreateTemperatures(int** biomeMapPtr, size_t mapSize)
+void BiomeGenerator::CreateTemperatures(int** tempMapPtr, int* biomeMap, size_t mapSize)
 {
-	int* biomeMap = *biomeMapPtr;
-	int* newBiomeMap = new int[mapSize * mapSize];
+	int* tempMap = *tempMapPtr;
+	int* newTempMap = new int[mapSize * mapSize];
 
 	for (int y = 0; y < mapSize; y++)
 	{
 		for (int x = 0; x < mapSize; x++)
 		{
-			int sample = biomeMap[y * mapSize + x];
+			int biome = biomeMap[y * mapSize + x];
+			int temperature = BIOME_TEMP_TEMPERATE;
 
-			if (sample > 0)
+			if (biome != BIOME_TYPE_OCEAN)
 			{
 				int r = m_Chance(m_RNG);
 				if (r <= 66)
-					sample = 1;
+					temperature = BIOME_TEMP_TEMPERATE;
 				else if (r <= 83)
-					sample = 2;
+					temperature = BIOME_TEMP_COLD;
 				else
-					sample = 3;
+					temperature = BIOME_TEMP_WARM;
 			}
 
-			newBiomeMap[y * mapSize + x] = sample;
+			newTempMap[y * mapSize + x] = temperature;
 		}
 	}
 
-	delete[] biomeMap;
-	*biomeMapPtr = newBiomeMap;
+	delete[] tempMap;
+	*tempMapPtr = newTempMap;
 }
 
-void BiomeGenerator::TransitionTemperatures(int** biomeMapPtr, size_t mapSize)
+void BiomeGenerator::TransitionTemperatures(int** tempMapPtr, size_t mapSize)
+{
+	int* tempMap = *tempMapPtr;
+	int* newTempMap = new int[mapSize * mapSize];
+
+	for (int y = 0; y < mapSize; y++)
+	{
+		for (int x = 0; x < mapSize; x++)
+		{
+			int temp = tempMap[y * mapSize + x];
+
+			if (temp == BIOME_TEMP_COLD)
+			{
+				if (CountNeighboursEqual(x, y, BIOME_TEMP_WARM, tempMap, mapSize) > 0)
+				{
+					temp = BIOME_TEMP_TEMPERATE;
+				}
+			}
+
+			newTempMap[y * mapSize + x] = temp;
+		}
+	}
+
+	delete[] tempMap;
+	*tempMapPtr = newTempMap;
+}
+
+void BiomeGenerator::SelectBiomes(int** biomeMapPtr, int* tempMap, size_t mapSize)
 {
 	int* biomeMap = *biomeMapPtr;
 	int* newBiomeMap = new int[mapSize * mapSize];
@@ -187,9 +219,35 @@ void BiomeGenerator::TransitionTemperatures(int** biomeMapPtr, size_t mapSize)
 	{
 		for (int x = 0; x < mapSize; x++)
 		{
-			int sample = biomeMap[y * mapSize + x];
+			BIOME_TYPE biomeType = static_cast<BIOME_TYPE>(biomeMap[y * mapSize + x]);
+			BIOME_TEMP biomeTemp = static_cast<BIOME_TEMP>(tempMap[y * mapSize + x]);
+			int biome;
 
-			newBiomeMap[y * mapSize + x] = sample;
+			// select biomes
+			if (biomeType == BIOME_TYPE_OCEAN)
+				biome = GetBiomeIDByName("Ocean");
+			else
+			{
+				const std::vector<int>& candidates = *m_BiomesByTemp[biomeTemp];
+				float totalOdds = 0.0f;
+				for (auto index : candidates)
+					totalOdds += m_AllBiomes[index].spawnWeight;
+
+				int chance = m_Chance(m_RNG);
+				int p = 0;
+				for (auto index : candidates)
+				{
+					int scaledOdds = static_cast<int>(ceil(100.0f * m_AllBiomes[index].spawnWeight / totalOdds));
+					p += scaledOdds;
+					if (chance <= p)
+					{
+						biome = index;
+						break;
+					}
+				}
+			}
+
+			newBiomeMap[y * mapSize + x] = biome;
 		}
 	}
 
@@ -216,8 +274,8 @@ void BiomeGenerator::Zoom2x(int** biomeMapPtr, size_t* mapSize)
 
 			if (Chance(20))
 			{
-				if (CountNeighboursEqual(sampleX, sampleY, 1, biomeMap, oldSize) > 0)
-					sample = 1 - sample;
+				if (CountNeighboursEqual(sampleX, sampleY, BIOME_TYPE_LAND, biomeMap, oldSize) > 0)
+					sample = sample == BIOME_TYPE_LAND ? BIOME_TYPE_OCEAN : BIOME_TYPE_LAND;
 			}
 
 			newBiomeMap[y * newSize + x] = sample;
@@ -227,6 +285,31 @@ void BiomeGenerator::Zoom2x(int** biomeMapPtr, size_t* mapSize)
 	delete[] biomeMap;
 	*biomeMapPtr = newBiomeMap;
 	*mapSize = newSize;
+}
+
+void BiomeGenerator::GetAllBiomesWithTemperature(std::vector<int>& out, BIOME_TEMP temperature)
+{
+	out.clear();
+	int index = 0;
+	for (const auto& biome : m_AllBiomes)
+	{
+		if (biome.temperature == temperature && biome.type == BIOME_TYPE_LAND)
+			out.push_back(index);
+		index++;
+	}
+}
+
+int BiomeGenerator::GetBiomeIDByName(const char* name) const
+{
+	int index = 0;
+	for (auto& biome : m_AllBiomes)
+	{
+		if (strcmp(name, biome.name) == 0)
+			return index;
+		index++;
+	}
+	assert(false && "No biome found with that name");
+	return -1;
 }
 
 int BiomeGenerator::CountNeighboursEqual(int x, int y, int v, int* biomeMap, size_t mapSize)
@@ -243,4 +326,93 @@ int BiomeGenerator::CountNeighboursEqual(int x, int y, int v, int* biomeMap, siz
 		count += biomeMap[(y + 1) * mapSize + x] == v;
 
 	return count;
+}
+
+
+void BiomeGenerator::CreateBiomeMapTexture(ID3D11Device* device)
+{
+	if (!m_BiomeMap) return;
+
+	D3D11_TEXTURE2D_DESC desc;
+	desc.Width = static_cast<unsigned int>(m_BiomeMapSize);
+	desc.Height = static_cast<unsigned int>(m_BiomeMapSize);
+	desc.MipLevels = 1;
+	desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_R32_SINT;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA pData;
+	pData.pSysMem = m_BiomeMap;
+	pData.SysMemPitch = static_cast<unsigned int>(sizeof(int) * m_BiomeMapSize);
+	pData.SysMemSlicePitch = 0;
+
+	ID3D11Texture2D* tex = nullptr;
+	HRESULT hr = device->CreateTexture2D(&desc, &pData, &tex);
+	assert(hr == S_OK);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc.Format = DXGI_FORMAT_R32_SINT;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+
+	hr = device->CreateShaderResourceView(tex, &srvDesc, &m_BiomeMapSRV);
+	assert(hr == S_OK);
+
+	D3D11_SAMPLER_DESC samplerDesc;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.MaxAnisotropy = 1;
+	samplerDesc.MaxLOD = 0;
+	samplerDesc.MinLOD = D3D11_FLOAT32_MAX;
+	samplerDesc.MipLODBias = 0;
+
+	hr = device->CreateSamplerState(&samplerDesc, &m_BiomeMapSampler);
+	assert(hr == S_OK);
+}
+
+void BiomeGenerator::CreateGenerationBuffer(ID3D11Device* device)
+{
+	// create biome data buffer
+	D3D11_BUFFER_DESC bufferDesc;
+	bufferDesc.ByteWidth = sizeof(TerrainNoiseSettings) * MAX_BIOMES;
+	bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	bufferDesc.StructureByteStride = sizeof(TerrainNoiseSettings);
+
+	D3D11_SUBRESOURCE_DATA initialData;
+	initialData.pSysMem = &m_GenerationSettings;
+	initialData.SysMemPitch = 0;
+	initialData.SysMemSlicePitch = 0;
+
+	HRESULT hr = device->CreateBuffer(&bufferDesc, &initialData, &m_GenerationSettingsBuffer);
+	assert(hr == S_OK);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	srvDesc.Buffer.FirstElement = 0;
+	srvDesc.Buffer.NumElements = MAX_BIOMES;
+
+	hr = device->CreateShaderResourceView(m_GenerationSettingsBuffer, &srvDesc, &m_GenerationSettingsView);
+	assert(hr == S_OK);
+}
+
+void BiomeGenerator::UpdateGenerationBuffer(ID3D11DeviceContext* deviceContext)
+{
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	HRESULT hr = deviceContext->Map(m_GenerationSettingsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	assert(hr == S_OK);
+	memcpy(mappedResource.pData, &m_GenerationSettingsBuffer, sizeof(m_GenerationSettingsBuffer));
+	deviceContext->Unmap(m_GenerationSettingsBuffer, 0);
 }

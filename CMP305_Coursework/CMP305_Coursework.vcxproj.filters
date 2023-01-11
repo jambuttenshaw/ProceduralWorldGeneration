@@ -87,13 +87,13 @@
     <ClCompile Include="InstanceShader.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="HeightmapFilters.cpp">
-      <Filter>Heightmap</Filter>
-    </ClCompile>
     <ClCompile Include="Heightmap.cpp">
       <Filter>Heightmap</Filter>
     </ClCompile>
     <ClCompile Include="BiomeGenerator.cpp">
+      <Filter>Heightmap</Filter>
+    </ClCompile>
+    <ClCompile Include="NoiseSettings.cpp">
       <Filter>Heightmap</Filter>
     </ClCompile>
   </ItemGroup>
@@ -158,6 +158,9 @@
     <ClInclude Include="BiomeGenerator.h">
       <Filter>Heightmap</Filter>
     </ClInclude>
+    <ClInclude Include="NoiseSettings.h">
+      <Filter>Heightmap</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\instance_ps.hlsl">
@@ -202,9 +205,6 @@
     <FxCompile Include="shaders\fullscreen_vs.hlsl">
       <Filter>Shaders\Water</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\voronoiBiomes_cs.hlsl">
-      <Filter>Shaders\Compute</Filter>
-    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\math.hlsli">
@@ -214,6 +214,9 @@
       <Filter>Shaders\Include</Filter>
     </None>
     <None Include="shaders\noiseSimplex.hlsli">
+      <Filter>Shaders\Include</Filter>
+    </None>
+    <None Include="Shaders\biomeHelper.hlsli">
       <Filter>Shaders\Include</Filter>
     </None>
   </ItemGroup>

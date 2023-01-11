@@ -6,6 +6,7 @@
 #include "nlohmann/json.hpp"
 
 #include "Heightmap.h"
+#include "BiomeGenerator.h"
 
 using namespace DirectX;
 
@@ -16,7 +17,7 @@ public:
 	virtual ~IHeightmapFilter() = default;
 
 	// pure virtual methods for BaseHeightmapFilter to implemente
-	virtual void Run(ID3D11DeviceContext* deviceContext, Heightmap* heightmap) = 0;
+	virtual void Run(ID3D11DeviceContext* deviceContext, Heightmap* heightmap, const BiomeGenerator* biomeGenerator) = 0;
 	virtual bool SettingsGUI() = 0;
 	virtual nlohmann::json Serialize() const = 0;
 	virtual void LoadFromJson(const nlohmann::json& data) = 0;
@@ -83,7 +84,7 @@ public:
 		if (m_SettingsBuffer) m_SettingsBuffer->Release();
 	}
 
-	virtual void Run(ID3D11DeviceContext* deviceContext, Heightmap* heightmap) override
+	virtual void Run(ID3D11DeviceContext* deviceContext, Heightmap* heightmap, const BiomeGenerator* biomeGenerator) override
 	{
 		ID3D11UnorderedAccessView* uav = heightmap->GetUAV();
 		deviceContext->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);

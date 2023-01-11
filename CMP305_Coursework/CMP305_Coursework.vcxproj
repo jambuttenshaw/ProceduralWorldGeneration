@@ -169,12 +169,12 @@
     <ClCompile Include="BiomeGenerator.cpp" />
     <ClCompile Include="CylinderMeshT.cpp" />
     <ClCompile Include="Heightmap.cpp" />
-    <ClCompile Include="HeightmapFilters.cpp" />
     <ClCompile Include="InstancedCubeMesh.cpp" />
     <ClCompile Include="InstanceShader.cpp" />
     <ClCompile Include="LightShader.cpp" />
     <ClCompile Include="LineMesh.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="NoiseSettings.cpp" />
     <ClCompile Include="QuadMeshT.cpp" />
     <ClCompile Include="RenderTarget.cpp" />
     <ClCompile Include="SerializationHelper.cpp" />
@@ -196,6 +196,7 @@
     <ClInclude Include="InstanceShader.h" />
     <ClInclude Include="LightShader.h" />
     <ClInclude Include="LineMesh.h" />
+    <ClInclude Include="NoiseSettings.h" />
     <ClInclude Include="QuadMeshT.h" />
     <ClInclude Include="RenderTarget.h" />
     <ClInclude Include="SerializationHelper.h" />
@@ -267,16 +268,6 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="Shaders\voronoiBiomes_cs.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
-    </FxCompile>
     <FxCompile Include="shaders\warpedSimpleNoise_cs.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
@@ -289,6 +280,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shaders\biomeHelper.hlsli" />
     <None Include="shaders\math.hlsli" />
     <None Include="shaders\noiseFunctions.hlsli" />
     <None Include="shaders\noiseSimplex.hlsli" />

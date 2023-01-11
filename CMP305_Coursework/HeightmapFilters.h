@@ -2,95 +2,7 @@
 
 #include "BaseHeightmapFilter.h"
 #include "nlohmann/json.hpp"
-
-// SETTINGS DEFINITIONS
-// these structs must EXACTLY match the HeightmapSettingsBuffer cbuffer in the filters respective compute shader
-// these structs must also be >>>>>>PADDED IN 16 BYTE CHUNKS<<<<<<
-// these structs are transferred DIRECTLY into the compute shaders settings cbuffer!!!
-
-struct SimpleNoiseSettings
-{
-	// 16 bytes
-	float Elevation = 1.0f;
-	float Frequency = 1.0f;
-	float VerticalShift = 0.0f;
-	int Octaves = 4;
-	// 16 bytes
-	DirectX::XMFLOAT2 Offset{ 0.0f, 0.0f };
-	float Persistence = 0.5f;
-	float Lacunarity = 2.0f;
-
-	bool SettingsGUI();
-	nlohmann::json Serialize() const;
-	void LoadFromJson(const nlohmann::json& data);
-};
-
-struct RidgeNoiseSettings
-{
-	// 16 bytes
-	float Elevation = 8.0f;
-	float Frequency = 0.5f;
-	float VerticalShift = 0.0f;
-	int Octaves = 8;
-	// 16 bytes
-	DirectX::XMFLOAT2 Offset{ 0.0f, 0.0f };
-	float Persistence = 0.6f;
-	float Lacunarity = 2.2f;
-	// 16 bytes
-	float Power = 5.0f;
-	float Gain = 7.0f;
-	float PeakSmoothing = 0.0f;
-	float Padding = 0.0f;
-
-	bool SettingsGUI();
-	nlohmann::json Serialize() const;
-	void LoadFromJson(const nlohmann::json& data);
-};
-
-struct WarpedSimpleNoiseSettings
-{
-	SimpleNoiseSettings WarpSettings;
-	SimpleNoiseSettings NoiseSettings;
-
-	bool SettingsGUI();
-	nlohmann::json Serialize() const;
-	void LoadFromJson(const nlohmann::json& data);
-};
-
-
-struct TerrainNoiseSettings
-{
-	SimpleNoiseSettings WarpSettings;
-	SimpleNoiseSettings ContinentSettings;
-	RidgeNoiseSettings MountainSettings;
-
-	float OceanDepthMultiplier = 0.0f;
-	float OceanFloorDepth = 3.0f;
-	float OceanFloorSmoothing = 0.5f;
-	float MountainBlend = 0.0f;
-
-	bool SettingsGUI();
-	nlohmann::json Serialize() const;
-	void LoadFromJson(const nlohmann::json& data);
-};
-
-
-struct VoronoiBiomeSettings
-{
-	XMFLOAT2 MinPointBounds{ -1.0f, -1.0f };
-	XMFLOAT2 MaxPointBounds{ 1.0f, 1.0f };
-
-	int PointCount = 4;
-	int BiomeSeed = 0;
-	int NumBiomeTypes = 4;
-	float TransitionThreshold = 0.95f;
-	SimpleNoiseSettings TransitionNoiseSettings;
-
-	bool SettingsGUI();
-	nlohmann::json Serialize() const;
-	void LoadFromJson(const nlohmann::json& data);
-};
-
+#include "NoiseSettings.h"
 
 // FILTER DEFINITIONS
 
@@ -135,27 +47,4 @@ public:
 	virtual ~TerrainNoiseFilter() = default;
 
 	inline virtual const char* Label() const override { return "Terrain Noise"; }
-};
-
-
-class VoronoiBiomesFilter : public BaseHeightmapFilter<VoronoiBiomeSettings>
-{
-	struct BiomeType
-	{
-		XMFLOAT2 centre;
-		int type;
-	};
-public:
-	VoronoiBiomesFilter(ID3D11Device* device);
-	virtual ~VoronoiBiomesFilter();
-
-	virtual void Run(ID3D11DeviceContext* deviceContext, Heightmap* heightmap) override;
-
-	inline virtual const char* Label() const override { return "Voronoi Biomes"; }
-
-private:
-	ID3D11Buffer* m_PointsBuffer = nullptr;
-	ID3D11ShaderResourceView* m_PointsSRV = nullptr;
-
-	const int m_MaxPoints = 256;
 };

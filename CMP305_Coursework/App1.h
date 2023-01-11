@@ -76,7 +76,6 @@ private:
 	XMFLOAT3 lightDir{ 0.7f, -0.7f, 0.7f };
 
 	IHeightmapFilter* m_HeightmapFilter = nullptr;
-	IHeightmapFilter* m_BiomeFilter = nullptr;
 
 	BiomeGenerator* m_BiomeGenerator = nullptr;
 	

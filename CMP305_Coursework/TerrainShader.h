@@ -6,6 +6,9 @@
 using namespace std;
 using namespace DirectX;
 
+class BiomeGenerator;
+class Heightmap;
+
 
 class TerrainShader
 {
@@ -28,7 +31,10 @@ private:
 		float flatThreshold;
 		float cliffThreshold;
 		float steepnessSmoothing;
-		float padding;
+
+		float biomeMapScale;
+		XMFLOAT2 biomeMapTopleft;
+		XMFLOAT2 worldOffset;
 	};
 
 public:
@@ -37,7 +43,8 @@ public:
 
 	void SetShaderParameters(ID3D11DeviceContext* deviceContext,
 								const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection,
-								ID3D11ShaderResourceView* heightmap, Light* light);
+								Heightmap* heightmap, const BiomeGenerator* biomeGeneration,
+								Light* light);
 	void Render(ID3D11DeviceContext* deviceContext, unsigned int indexCount);
 
 	void GUI();
@@ -71,5 +78,8 @@ private:
 	float m_FlatThreshold = 0.5f;
 	float m_CliffThreshold = 0.8f;
 	float m_SteepnessSmoothing = 0.1f;
+
+	XMFLOAT2 m_BiomeMapTopleft{ 0.0f, 0.0f };
+	float m_BiomeMapScale = 8.0f;
 };
 

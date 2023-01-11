@@ -39,9 +39,9 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	// create game objects
 	createTerrain({ 0.0f, 0.0f, 0.0f });
-	createTerrain({ -100.0f, 0.0f, 0.0f });
-	createTerrain({ 0.0f, 0.0f, -100.0f });
-	createTerrain({ -100.0f, 0.0f, -100.0f });
+	createTerrain({ 100.0f, 0.0f, 0.0f });
+	createTerrain({ 0.0f, 0.0f, 100.0f });
+	createTerrain({ 100.0f, 0.0f, 100.0f });
 
 	// Initialise light
 	light = new Light();
@@ -50,11 +50,8 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	light->setSpecularColour(lightSpecular.x, lightSpecular.y, lightSpecular.z, 1.0f);
 	light->setDirection(lightDir.x, lightDir.y, lightDir.z);
 
-	m_BiomeFilter = new VoronoiBiomesFilter(renderer->getDevice());
-
 	m_BiomeGenerator = new BiomeGenerator(0);
-	m_BiomeGenerator->GenerateBiomeMap();
-	m_BiomeGenerator->CreateDebugTexture(renderer->getDevice());
+	m_BiomeGenerator->GenerateBiomeMap(renderer->getDevice());
 
 	if (m_LoadOnOpen)
 	{
@@ -168,7 +165,7 @@ void App1::worldPass()
 			break;
 		case GameObject::MeshType::Terrain:
 			go.mesh.terrain->SendData(renderer->getDeviceContext());
-			m_TerrainShader->SetShaderParameters(renderer->getDeviceContext(), w, viewMatrix, projectionMatrix, m_GOToHeightmap.at(goIndex)->GetSRV(), light);
+			m_TerrainShader->SetShaderParameters(renderer->getDeviceContext(), w, viewMatrix, projectionMatrix, m_GOToHeightmap.at(goIndex), m_BiomeGenerator, light);
 			m_TerrainShader->Render(renderer->getDeviceContext(), go.mesh.terrain->GetIndexCount());
 		}
 		goIndex++;
@@ -265,13 +262,6 @@ void App1::gui()
 			ImGui::TreePop();
 		}
 		ImGui::Separator();
-
-		if (ImGui::TreeNode("Terrain"))
-		{
-			m_TerrainShader->GUI();
-
-			ImGui::TreePop();
-		}
 	}
 	ImGui::Separator();
 
@@ -303,7 +293,7 @@ void App1::gui()
 					break;
 				currentHeightmapFilter++;
 			}
-			if (ImGui::Combo("Filter", &currentHeightmapFilter, m_AllFilterNames.data(), m_AllFilterNames.size()))
+			if (ImGui::Combo("Filter", &currentHeightmapFilter, m_AllFilterNames.data(), static_cast<int>(m_AllFilterNames.size())))
 			{
 				delete m_HeightmapFilter;
 				m_HeightmapFilter = createFilterFromIndex(currentHeightmapFilter);
@@ -315,11 +305,16 @@ void App1::gui()
 			}
 			ImGui::TreePop();
 		}
-		if (ImGui::TreeNode("Biome Filter"))
+		if (ImGui::TreeNode("Terrain"))
 		{
-			if (m_BiomeFilter)
+			m_TerrainShader->GUI();
+
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNode("Biome Generator"))
+		{
+			if (m_BiomeGenerator)
 			{
-				regenerateTerrain |= m_BiomeFilter->SettingsGUI();
 			}
 			ImGui::TreePop();
 		}
@@ -334,10 +329,8 @@ void App1::applyFilterStack()
 {
 	for (auto heightmap : m_Heightmaps)
 	{
-		if (m_BiomeFilter)
-			m_BiomeFilter->Run(renderer->getDeviceContext(), heightmap);
 		if (m_HeightmapFilter)
-			m_HeightmapFilter->Run(renderer->getDeviceContext(), heightmap);
+			m_HeightmapFilter->Run(renderer->getDeviceContext(), heightmap, m_BiomeGenerator);
 	}
 }
 
@@ -375,7 +368,6 @@ void App1::saveSettings(const std::string& file)
 
 	// serialize filter data
 	serialized["heightmapFilter"] = m_HeightmapFilter->Serialize();
-	serialized["biomeFilter"] = m_BiomeFilter->Serialize();
 
 	// serialize light settings
 	serialized["lightDir"] = SerializationHelper::SerializeFloat3(lightDir);
@@ -398,7 +390,6 @@ void App1::loadSettings(const std::string& file)
 {
 	// clear out existing settings
 	delete m_HeightmapFilter;
-	delete m_BiomeFilter;
 
 	// load data from file
 	std::ifstream infile(file);
@@ -425,11 +416,6 @@ void App1::loadSettings(const std::string& file)
 				m_HeightmapFilter->LoadFromJson(filter);
 			}
 		}
-	}
-	if (data.contains("biomeFilter"))
-	{
-		m_BiomeFilter = new VoronoiBiomesFilter(renderer->getDevice());
-		m_BiomeFilter->LoadFromJson(data["biomeFilter"]);
 	}
 
 	if (data.contains("lightDir")) SerializationHelper::LoadFloat3FromJson(&lightDir, data["lightDir"]);

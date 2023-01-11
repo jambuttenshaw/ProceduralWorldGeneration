@@ -3,7 +3,10 @@
 #include "math.hlsli"
 
 Texture2D heightmap : register(t0);
+Texture2D biomeMap : register(t1);
+
 SamplerState heightmapSampler : register(s0);
+SamplerState biomeMapSampler : register(s1);
 
 cbuffer LightBuffer : register(b0)
 {
@@ -18,7 +21,11 @@ cbuffer TerrainBuffer : register(b1)
     float flatThreshold;
     float cliffThreshold;
     float steepnessSmoothing;
-    float padding1;
+    
+    // mapping
+    float biomeMapScale;
+    float2 biomeMapTopLeft;
+    float2 worldOffset;
 };
 
 struct InputType
@@ -47,6 +54,7 @@ float3 calculateNormal(float2 pos)
     float topY = heightmap.SampleLevel(heightmapSampler, topTex, 0).r;
     float bottomY = heightmap.SampleLevel(heightmapSampler, bottomTex, 0).r;
 	
+    // slightly better estimation of normals at the heightmap edge
     if (leftTex.x < 0.0f)
         leftY = 2.0f * thisY - rightY;
     if (rightTex.x > 1.0f)
@@ -71,10 +79,10 @@ float4 calculateDiffuse(float3 lightDirection, float3 normal, float4 diffuse)
 
 float4 main(InputType input) : SV_TARGET
 {
-	float3 c = heightmap.SampleLevel(heightmapSampler, input.tex, 0).gba;
-    
-	float d = lerp(c.r / 3.0f, c.g / 3.0f, c.b);
-	return float4(d.xxx, 1);
+    float2 biomeTex = (worldOffset + input.tex - biomeMapTopLeft) / biomeMapScale;
+    int biome = asint(biomeMap.Sample(biomeMapSampler, biomeTex).r);
+    float b = float(biome) / 6.0f;
+    return float4(b.xxx, 1.0f);
     
     float3 normal = calculateNormal(input.tex);
 	
