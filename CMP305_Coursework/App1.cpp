@@ -28,11 +28,13 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	m_LightShader = new LightShader(renderer->getDevice(), hwnd);
 	m_TerrainShader = new TerrainShader(renderer->getDevice());
 	m_WaterShader = new WaterShader(renderer->getDevice(), textureMgr->getTexture(L"oceanNormalMapA"), textureMgr->getTexture(L"oceanNormalMapB"));
+	m_BiomeMapShader = new BiomeMapShader(renderer->getDevice(), hwnd);
 
 	m_RenderTarget = new RenderTarget(renderer->getDevice(), screenWidth, screenHeight);
 
 	m_TerrainMesh = new TerrainMesh(renderer->getDevice());
 	m_Cube = new CubeMesh(renderer->getDevice(), renderer->getDeviceContext(), 2);
+	m_OrthoMesh = new OrthoMesh(renderer->getDevice(), renderer->getDeviceContext(), 150, 150, (screenWidth / 2) - 75, (screenHeight / 2) - 75);
 
 	camera->setPosition(-50.0f, 30.0f, -50.0f);
 	camera->setRotation(0.0f, 0.0f, 0.0f);
@@ -42,6 +44,9 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	createTerrain({ 100.0f, 0.0f, 0.0f });
 	createTerrain({ 0.0f, 0.0f, 100.0f });
 	createTerrain({ 100.0f, 0.0f, 100.0f });
+
+	m_WorldMinPos = { 0, 0 };
+	m_WorldSize = { 2, 2 };
 
 	// Initialise light
 	light = new Light();
@@ -124,6 +129,21 @@ bool App1::render()
 		
 		waterPass();
 	}
+
+	renderer->setZBuffer(false);
+	// Debug: biome map on the screen
+	if (true)
+	{
+		m_OrthoMesh->sendData(renderer->getDeviceContext());
+
+		XMMATRIX worldMatrix = renderer->getWorldMatrix();
+		XMMATRIX orthoViewMatrix = camera->getOrthoViewMatrix();
+		XMMATRIX orthoMatrix = renderer->getOrthoMatrix();
+
+		m_BiomeMapShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, m_BiomeGenerator, m_WorldMinPos, m_WorldSize);
+		m_BiomeMapShader->render(renderer->getDeviceContext(), m_OrthoMesh->getIndexCount());
+	}
+	renderer->setZBuffer(true);
 
 	// GUI
 	

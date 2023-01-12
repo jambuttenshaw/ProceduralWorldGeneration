@@ -99,6 +99,9 @@
     <ClCompile Include="HeightmapFilter.cpp">
       <Filter>Heightmap</Filter>
     </ClCompile>
+    <ClCompile Include="BiomeMapShader.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App1.h">
@@ -161,6 +164,9 @@
     <ClInclude Include="NoiseSettings.h">
       <Filter>Heightmap</Filter>
     </ClInclude>
+    <ClInclude Include="BiomeMapShader.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\instance_ps.hlsl">
@@ -204,6 +210,12 @@
     </FxCompile>
     <FxCompile Include="shaders\fullscreen_vs.hlsl">
       <Filter>Shaders\Water</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\biomeMap_vs.hlsl">
+      <Filter>Shaders\Terrain</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\biomeMap_ps.hlsl">
+      <Filter>Shaders\Terrain</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

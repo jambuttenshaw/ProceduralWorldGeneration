@@ -167,6 +167,7 @@
     <ClCompile Include="App1.cpp" />
     <ClCompile Include="BaseFullScreenShader.cpp" />
     <ClCompile Include="BiomeGenerator.cpp" />
+    <ClCompile Include="BiomeMapShader.cpp" />
     <ClCompile Include="CylinderMeshT.cpp" />
     <ClCompile Include="Heightmap.cpp" />
     <ClCompile Include="HeightmapFilter.cpp" />
@@ -188,6 +189,7 @@
   <ItemGroup>
     <ClInclude Include="App1.h" />
     <ClInclude Include="BaseFullScreenShader.h" />
+    <ClInclude Include="BiomeMapShader.h" />
     <ClInclude Include="HeightmapFilter.h" />
     <ClInclude Include="BiomeGenerator.h" />
     <ClInclude Include="CylinderMeshT.h" />
@@ -208,6 +210,18 @@
     <ClInclude Include="WritableTexture.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Shaders\biomeMap_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\biomeMap_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
     <FxCompile Include="shaders\fullscreen_vs.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>

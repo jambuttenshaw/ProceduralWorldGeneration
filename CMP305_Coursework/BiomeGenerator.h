@@ -12,6 +12,8 @@ using namespace DirectX;
 #define MAX_BIOMES 16
 
 
+
+
 class BiomeGenerator 
 {
 	enum BIOME_TYPE : int
@@ -59,12 +61,15 @@ public:
 
 	void GenerateBiomeMap(ID3D11Device* device);
 
+	inline size_t GetBiomeCount() const { return m_AllBiomes.size(); }
+
 	inline ID3D11ShaderResourceView* GetBiomeMapSRV() const { return m_BiomeMapSRV; }
 	inline size_t GetBiomeMapResolution() const { return m_BiomeMapSize; }
-	inline size_t GetBiomeCount() const { return m_AllBiomes.size(); }
+	
 	inline ID3D11Buffer* GetBiomeMappingBuffer() const { return m_BiomeMappingBuffer; }
 	
 	inline ID3D11ShaderResourceView* GetGenerationSettingsSRV() const { return m_GenerationSettingsView; }
+	inline const XMFLOAT4* GetBiomeColours() const { return m_BiomeColours; }
 
 	void UpdateBuffers(ID3D11DeviceContext* deviceContext);
 
@@ -106,6 +111,7 @@ private:
 	std::vector<int> m_WarmBiomes;
 	std::map<BIOME_TEMP, std::vector<int>*> m_BiomesByTemp;
 
+	XMFLOAT4 m_BiomeColours[MAX_BIOMES];
 	TerrainNoiseSettings m_GenerationSettings[MAX_BIOMES];
 	ID3D11Buffer* m_GenerationSettingsBuffer = nullptr;
 	ID3D11ShaderResourceView* m_GenerationSettingsView = nullptr;

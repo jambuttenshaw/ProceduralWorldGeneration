@@ -20,7 +20,7 @@ public:
 	inline void SetOffset(const XMFLOAT2& o) { m_Offset = o; }
 
 private:
-	unsigned int m_Resolution = 256;
+	unsigned int m_Resolution = 1024;
 
 	ID3D11ShaderResourceView* m_SRV = nullptr;
 	ID3D11UnorderedAccessView* m_UAV = nullptr;

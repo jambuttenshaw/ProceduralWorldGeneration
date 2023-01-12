@@ -9,6 +9,7 @@
 #include "LightShader.h"
 #include "TerrainShader.h"
 #include "WaterShader.h"
+#include "BiomeMapShader.h"
 
 #include "RenderTarget.h"
 
@@ -54,13 +55,18 @@ private:
 	LightShader* m_LightShader = nullptr;
 	TerrainShader* m_TerrainShader = nullptr;
 	WaterShader* m_WaterShader = nullptr;
+	BiomeMapShader* m_BiomeMapShader = nullptr;
 
 	RenderTarget* m_RenderTarget = nullptr;
 
 	TerrainMesh* m_TerrainMesh = nullptr;
 	CubeMesh* m_Cube = nullptr;
+	// for debug display of textures
+	OrthoMesh* m_OrthoMesh = nullptr;
 
 	std::vector<GameObject> m_GameObjects;
+	XMFLOAT2 m_WorldMinPos{ 0, 0 };
+	XMFLOAT2 m_WorldSize{ 0, 0 };
 
 	std::vector<Heightmap*> m_Heightmaps;
 	std::map<size_t, Heightmap*> m_GOToHeightmap;

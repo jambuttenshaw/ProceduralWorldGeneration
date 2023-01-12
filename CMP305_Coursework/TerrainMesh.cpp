@@ -2,7 +2,7 @@
 
 
 TerrainMesh::TerrainMesh(ID3D11Device* device)
-	: TerrainMesh(device, 256, 100.0f)
+	: TerrainMesh(device, 128, 100.0f)
 {
 }
 

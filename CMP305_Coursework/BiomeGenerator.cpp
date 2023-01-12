@@ -67,6 +67,7 @@ bool BiomeGenerator::SettingsGUI()
 	ImGui::Text("Type: %s", StrFromBiomeType(biome.type));
 	ImGui::Text("Temperature: %s", StrFromBiomeTemp(biome.temperature));
 	ImGui::Text("Spawn weight: %d", biome.spawnWeight);
+	ImGui::ColorEdit3("Biome Map Colour", (float*)(m_BiomeColours + selectedBiome));
 
 	ImGui::Separator();
 	ImGui::Text("Heightmap Generation:");
@@ -84,6 +85,12 @@ nlohmann::json BiomeGenerator::Serialize() const
 	serialized["biomeMapTopLeft"] = SerializationHelper::SerializeFloat2(m_BiomeMapTopLeft);
 	serialized["biomeMapScale"] = m_BiomeMapScale;
 	serialized["biomeBlending"] = m_BiomeBlending;
+
+	serialized["biomeColours"] = nlohmann::json::array();
+	for (int i = 0; i < m_AllBiomes.size(); i++)
+	{
+		serialized["biomeColours"].push_back(SerializationHelper::SerializeFloat4(m_BiomeColours[i]));
+	}
 
 	serialized["generationSettings"] = nlohmann::json::array();
 	for (int i = 0; i < m_AllBiomes.size(); i++)
@@ -106,6 +113,16 @@ void BiomeGenerator::LoadFromJson(const nlohmann::json& data)
 		for (auto& biome : data["generationSettings"])
 		{
 			m_GenerationSettings[index].LoadFromJson(biome);
+			index++;
+		}
+	}
+
+	if (data.contains("biomeColours"))
+	{
+		int index = 0;
+		for (auto& biome : data["biomeColours"])
+		{
+			SerializationHelper::LoadFloat4FromJson(m_BiomeColours + index, biome);
 			index++;
 		}
 	}
