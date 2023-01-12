@@ -6,6 +6,49 @@
 #include "imGUI/imgui.h"
 #include "SerializationHelper.h"
 
+static bool BiomeNameItemGetter(void* data, int idx, const char** out_str)
+{
+	*out_str = ((BiomeGenerator::Biome*)data + idx)->name;
+	return true;
+}
+
+
+bool BiomeGenerator::BiomeTan::SettingsGUI()
+{
+	bool changed = false;
+
+	changed |= ImGui::ColorEdit3("Shore", &shoreColour.x);
+	changed |= ImGui::ColorEdit3("Flat", &flatColour.x);
+	changed |= ImGui::ColorEdit3("Slope", &slopeColour.x);
+	changed |= ImGui::ColorEdit3("Cliff", &cliffColour.x);
+
+	return changed;
+}
+
+nlohmann::json BiomeGenerator::BiomeTan::Serialize() const
+{
+	auto serialized = nlohmann::json();
+
+	serialized["shore"] = SerializationHelper::SerializeFloat3(shoreColour);
+	serialized["flat"] = SerializationHelper::SerializeFloat3(flatColour);
+	serialized["slope"] = SerializationHelper::SerializeFloat3(slopeColour);
+	serialized["cliff"] = SerializationHelper::SerializeFloat3(cliffColour);
+
+	return serialized;
+}
+
+void BiomeGenerator::BiomeTan::LoadFromJson(const nlohmann::json& data)
+{
+	if (data.contains("shore")) SerializationHelper::LoadFloat3FromJson(&shoreColour, data["shore"]);
+	if (data.contains("flat")) SerializationHelper::LoadFloat3FromJson(&flatColour, data["flat"]);
+	if (data.contains("slope")) SerializationHelper::LoadFloat3FromJson(&slopeColour, data["slope"]);
+	if (data.contains("cliff")) SerializationHelper::LoadFloat3FromJson(&cliffColour, data["cliff"]);
+}
+
+
+
+
+
 BiomeGenerator::BiomeGenerator(ID3D11Device* device, unsigned int seed)
 	: m_RNG(seed), m_Chance(1, 100)
 {
@@ -38,7 +81,7 @@ BiomeGenerator::~BiomeGenerator()
 	if (m_TemperatureMap) delete m_TemperatureMap;
 }
 
-bool BiomeGenerator::SettingsGUI()
+bool BiomeGenerator::GenerationSettingsGUI()
 {
 	bool changed = false;
 
@@ -48,21 +91,13 @@ bool BiomeGenerator::SettingsGUI()
 	ImGui::Text("Mapping:");
 	changed |= ImGui::DragFloat2("Top Left", &m_BiomeMapTopLeft.x, 0.01f);
 	changed |= ImGui::DragFloat("Scale", &m_BiomeMapScale, 0.01f);
-	changed |= ImGui::SliderFloat("Blending", &m_BiomeBlending, 0.01f, 1.0f);
+	changed |= ImGui::SliderFloat("Blending", &m_BiomeBlending, 0.0f, 1.0f);
 	
 	ImGui::Separator();
 	ImGui::Text("Biome Settings:");
 
 	static int selectedBiome = 0;
-	struct FuncHolder { // to allow inline function declaration
-		static bool ItemGetter(void* data, int idx, const char** out_str)
-		{
-			*out_str = ((Biome*)data + idx)->name;
-			return true;
-		}
-	};
-
-	ImGui::Combo("Biome", &selectedBiome, &FuncHolder::ItemGetter, m_AllBiomes.data(), static_cast<int>(m_AllBiomes.size()));
+	ImGui::Combo("Biome", &selectedBiome, &BiomeNameItemGetter, m_AllBiomes.data(), static_cast<int>(m_AllBiomes.size()));
 
 	Biome& biome = m_AllBiomes.at(selectedBiome);
 	ImGui::Separator();
@@ -81,6 +116,26 @@ bool BiomeGenerator::SettingsGUI()
 	return changed;
 }
 
+bool BiomeGenerator::TanningSettingsGUI()
+{
+	bool changed = false;
+	ImGui::Separator();
+
+	ImGui::Text("Biome Tanning Settings:");
+
+	static int selectedBiome = 0;
+	ImGui::Combo("Biome", &selectedBiome, &BiomeNameItemGetter, m_AllBiomes.data(), static_cast<int>(m_AllBiomes.size()));
+
+	ImGui::Separator();
+
+	ImGui::Text("%s Tanning", m_AllBiomes[selectedBiome].name);
+	changed |= m_BiomeTans[selectedBiome].SettingsGUI();
+
+	ImGui::Separator();
+
+	return changed;
+}
+
 nlohmann::json BiomeGenerator::Serialize() const
 {
 	nlohmann::json serialized;
@@ -91,15 +146,15 @@ nlohmann::json BiomeGenerator::Serialize() const
 
 	serialized["biomeMinimapColours"] = nlohmann::json::array();
 	for (int i = 0; i < m_AllBiomes.size(); i++)
-	{
 		serialized["biomeMinimapColours"].push_back(SerializationHelper::SerializeFloat4(m_BiomeMinimapColours[i]));
-	}
 
 	serialized["generationSettings"] = nlohmann::json::array();
 	for (int i = 0; i < m_AllBiomes.size(); i++)
-	{
 		serialized["generationSettings"].push_back(m_GenerationSettings[i].Serialize());
-	}
+	
+	serialized["biomeTans"] = nlohmann::json::array();
+	for (int i = 0; i < m_AllBiomes.size(); i++)
+		serialized["biomeTans"].push_back(m_BiomeTans[i].Serialize());
 
 	return serialized;
 }
@@ -109,6 +164,16 @@ void BiomeGenerator::LoadFromJson(const nlohmann::json& data)
 	if (data.contains("biomeMapTopLeft")) SerializationHelper::LoadFloat2FromJson(&m_BiomeMapTopLeft, data["biomeMapTopLeft"]);
 	if (data.contains("biomeMapScale")) m_BiomeMapScale = data["biomeMapScale"];
 	if (data.contains("biomeBlending")) m_BiomeBlending = data["biomeBlending"];
+
+	if (data.contains("biomeMinimapColours"))
+	{
+		int index = 0;
+		for (auto& biome : data["biomeMinimapColours"])
+		{
+			SerializationHelper::LoadFloat4FromJson(m_BiomeMinimapColours + index, biome);
+			index++;
+		}
+	}
 
 	if (data.contains("generationSettings"))
 	{
@@ -120,12 +185,12 @@ void BiomeGenerator::LoadFromJson(const nlohmann::json& data)
 		}
 	}
 
-	if (data.contains("biomeMinimapColours"))
+	if (data.contains("biomeTans"))
 	{
 		int index = 0;
-		for (auto& biome : data["biomeMinimapColours"])
+		for (auto& biome : data["biomeTans"])
 		{
-			SerializationHelper::LoadFloat4FromJson(m_BiomeMinimapColours + index, biome);
+			m_BiomeTans[index].LoadFromJson(biome);
 			index++;
 		}
 	}
@@ -145,6 +210,11 @@ void BiomeGenerator::GenerateBiomeMap(ID3D11Device* device)
 	Zoom2x(&m_BiomeMap, &m_BiomeMapSize);
 	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
 	Zoom2x(&m_BiomeMap, &m_BiomeMapSize);
+	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
+	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
+	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
+	Zoom2x(&m_BiomeMap, &m_BiomeMapSize);
+	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
 	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
 	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
 	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
@@ -173,7 +243,7 @@ void BiomeGenerator::IslandsCA(int** biomeMapPtr, size_t mapSize)
 
 	for (int i = 0; i < mapSize * mapSize; i++)
 	{
-		if (Chance(20))
+		if (Chance(m_ContinentChance))
 			newBiomeMap[i] = BIOME_TYPE_LAND;
 		else
 			newBiomeMap[i] = BIOME_TYPE_OCEAN;
@@ -201,7 +271,7 @@ void BiomeGenerator::AddIslandsCA(int** biomeMapPtr, size_t mapSize)
 				// if ocean is next to at least 1 land tile, then theres a chance it will also become land
 				if (CountNeighboursEqual(x, y, BIOME_TYPE_LAND, biomeMap, mapSize) > 0)
 				{
-					if (Chance(30))
+					if (Chance(m_IslandExpandChance))
 						sample = BIOME_TYPE_LAND;
 				}
 			}
@@ -211,7 +281,7 @@ void BiomeGenerator::AddIslandsCA(int** biomeMapPtr, size_t mapSize)
 				// if land is next to more than 1 ocean tile, then theres a chance it will become ocean
 				if (CountNeighboursEqual(x, y, BIOME_TYPE_OCEAN, biomeMap, mapSize) > 1)
 				{
-					if (Chance(15))
+					if (Chance(m_IslandErodeChance))
 						sample = BIOME_TYPE_OCEAN;
 				}
 			}
@@ -237,7 +307,7 @@ void BiomeGenerator::RemoveTooMuchOcean(int** biomeMapPtr, size_t mapSize)
 
 			if (CountNeighboursEqual(x, y, BIOME_TYPE_OCEAN, biomeMap, mapSize) == 4)
 			{
-				if (Chance(25))
+				if (Chance(m_RemoveTooMuchOceanChance))
 					sample = BIOME_TYPE_LAND;
 			}
 
@@ -265,11 +335,11 @@ void BiomeGenerator::CreateTemperatures(int** tempMapPtr, int* biomeMap, size_t 
 			{
 				int r = m_Chance(m_RNG);
 				if (r <= 66)
-					temperature = BIOME_TEMP_TEMPERATE;
+					temperature = BIOME_TEMP_WARM;
 				else if (r <= 83)
 					temperature = BIOME_TEMP_COLD;
 				else
-					temperature = BIOME_TEMP_WARM;
+					temperature = BIOME_TEMP_TEMPERATE;
 			}
 
 			newTempMap[y * mapSize + x] = temperature;
@@ -536,7 +606,7 @@ void BiomeGenerator::CreateBiomeTanBuffer(ID3D11Device* device)
 	srvDesc.Buffer.FirstElement = 0;
 	srvDesc.Buffer.NumElements = MAX_BIOMES;
 
-	hr = device->CreateShaderResourceView(m_GenerationSettingsBuffer, &srvDesc, &m_BiomeTanView);
+	hr = device->CreateShaderResourceView(m_BiomeTanBuffer, &srvDesc, &m_BiomeTanView);
 	assert(hr == S_OK);
 }
 
@@ -585,3 +655,4 @@ const char* BiomeGenerator::StrFromBiomeTemp(BIOME_TEMP temp)
 	default:					return "Unknown";
 	}
 }
+

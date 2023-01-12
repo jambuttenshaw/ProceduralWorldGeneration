@@ -16,6 +16,8 @@ using namespace DirectX;
 
 class BiomeGenerator 
 {
+public:
+
 	enum BIOME_TYPE : int
 	{
 		BIOME_TYPE_OCEAN = 0,
@@ -44,10 +46,14 @@ class BiomeGenerator
 
 	struct BiomeTan
 	{
-		XMFLOAT4 shoreColour;
-		XMFLOAT4 flatColour;
-		XMFLOAT4 steepColour;
-		XMFLOAT4 cliffColour;
+		XMFLOAT3 shoreColour{ 0.89f, 0.8f, 0.42f };
+		XMFLOAT3 flatColour{ 0.3f, 0.5f, 0.05f };
+		XMFLOAT3 slopeColour{ 0.35f, 0.23f, 0.04f };
+		XMFLOAT3 cliffColour{ 0.19f, 0.18f, 0.15f };
+
+		bool SettingsGUI();
+		nlohmann::json Serialize() const;
+		void LoadFromJson(const nlohmann::json& data);
 	};
 
 	struct BiomeMappingBufferType
@@ -59,11 +65,11 @@ class BiomeGenerator
 		XMFLOAT3 padding;
 	};
 
-public:
 	BiomeGenerator(ID3D11Device* device, unsigned int seed);
 	~BiomeGenerator();
 
-	bool SettingsGUI();
+	bool GenerationSettingsGUI();
+	bool TanningSettingsGUI();
 	nlohmann::json Serialize() const;
 	void LoadFromJson(const nlohmann::json& data);
 
@@ -120,6 +126,12 @@ private:
 	std::vector<int> m_TemperateBiomes;
 	std::vector<int> m_WarmBiomes;
 	std::map<BIOME_TEMP, std::vector<int>*> m_BiomesByTemp;
+
+	// biome generation constants (all are integers [1,100] for how likely something is to occur)
+	int m_ContinentChance = 15;
+	int m_IslandExpandChance = 30;
+	int m_IslandErodeChance = 15;
+	int m_RemoveTooMuchOceanChance = 45;
 
 	int* m_BiomeMap = nullptr;
 	size_t m_BiomeMapSize = -1;

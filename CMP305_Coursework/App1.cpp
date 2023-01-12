@@ -308,13 +308,16 @@ void App1::gui()
 		if (ImGui::TreeNode("Generation"))
 		{
 			if (m_BiomeGenerator)
-			{
-				regenerateTerrain |= m_BiomeGenerator->SettingsGUI();
-			}
+				regenerateTerrain |= m_BiomeGenerator->GenerationSettingsGUI();
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNode("Shading"))
 		{
+			if (m_BiomeGenerator)
+			{
+				if (m_BiomeGenerator->TanningSettingsGUI())
+					m_BiomeGenerator->UpdateBuffers(renderer->getDeviceContext()); // update tanning buffer
+			}
 			m_TerrainShader->GUI();
 
 			ImGui::TreePop();

@@ -172,6 +172,7 @@ void TerrainShader::Render(ID3D11DeviceContext* deviceContext, unsigned int inde
 
 void TerrainShader::GUI()
 {
+	ImGui::Text("Steepness-based Tanning:");
 	ImGui::SliderFloat("Flat Threshold", &m_FlatThreshold, 0.0f, m_CliffThreshold);
 	ImGui::SliderFloat("Cliff Threshold", &m_CliffThreshold, m_FlatThreshold, 1.0f);
 	ImGui::SliderFloat("Steepness Smoothing", &m_SteepnessSmoothing, 0.0f, 0.2f);

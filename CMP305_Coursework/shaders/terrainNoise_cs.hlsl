@@ -19,13 +19,8 @@ cbuffer BiomeMappingBuffer : register(b1)
     BiomeMappingBuffer mappingBuffer;
 }
 
-float evalTerrainNoise(float2 inputPos, TerrainNoiseSettings terrainSettings)
+float evalTerrainNoise(float2 pos, TerrainNoiseSettings terrainSettings)
 {
-    // apply warping
-    float2 pos = inputPos;
-    //pos += float2(SimpleNoise(inputPos + float2(17.13f, 23.7f), terrainSettings.warpSettings),
-    //              SimpleNoise(inputPos - float2(17.13f, 23.7f), terrainSettings.warpSettings));
-    
     // create continent shape
     float continentShape = SimpleNoise(pos, terrainSettings.continentSettings);
     // create mountains
