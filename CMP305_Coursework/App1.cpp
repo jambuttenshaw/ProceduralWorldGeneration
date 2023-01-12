@@ -283,9 +283,9 @@ void App1::gui()
 	}
 	ImGui::Separator();
 
-	if (ImGui::CollapsingHeader("Terrain Filters"))
+	if (ImGui::CollapsingHeader("Terrain"))
 	{
-		if (ImGui::TreeNode("Biome Generator"))
+		if (ImGui::TreeNode("Generation"))
 		{
 			if (m_BiomeGenerator)
 			{
@@ -293,7 +293,7 @@ void App1::gui()
 			}
 			ImGui::TreePop();
 		}
-		if (ImGui::TreeNode("Terrain"))
+		if (ImGui::TreeNode("Shading"))
 		{
 			m_TerrainShader->GUI();
 

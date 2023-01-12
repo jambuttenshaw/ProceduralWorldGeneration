@@ -42,9 +42,11 @@ class BiomeGenerator
 
 	struct BiomeMappingBufferType
 	{
-		XMFLOAT2 biomeMapTopleft;
-		float biomeMapScale;
-		unsigned int biomeMapResolution;
+		XMFLOAT2 topleft;
+		float scale;
+		unsigned int resolution;
+		float blending;
+		XMFLOAT3 padding;
 	};
 
 public:
@@ -60,7 +62,6 @@ public:
 	inline ID3D11ShaderResourceView* GetBiomeMapSRV() const { return m_BiomeMapSRV; }
 	inline size_t GetBiomeMapResolution() const { return m_BiomeMapSize; }
 	inline size_t GetBiomeCount() const { return m_AllBiomes.size(); }
-	inline ID3D11SamplerState* GetBiomeMapSampler() const { return m_BiomeMapSampler; }
 	inline ID3D11Buffer* GetBiomeMappingBuffer() const { return m_BiomeMappingBuffer; }
 	
 	inline ID3D11ShaderResourceView* GetGenerationSettingsSRV() const { return m_GenerationSettingsView; }
@@ -92,6 +93,9 @@ private:
 
 	inline bool Chance(int percent) { return m_Chance(m_RNG) <= percent; }
 
+	const char* StrFromBiomeType(BIOME_TYPE type);
+	const char* StrFromBiomeTemp(BIOME_TEMP temp);
+
 private:
 	std::mt19937 m_RNG;
 	std::uniform_int_distribution<int> m_Chance;
@@ -109,7 +113,6 @@ private:
 	int* m_BiomeMap = nullptr;
 	size_t m_BiomeMapSize = -1;
 	ID3D11ShaderResourceView* m_BiomeMapSRV = nullptr;
-	ID3D11SamplerState* m_BiomeMapSampler = nullptr;
 
 	int* m_TemperatureMap = nullptr;
 	size_t m_TemperatureMapSize = -1;
@@ -117,4 +120,5 @@ private:
 	ID3D11Buffer* m_BiomeMappingBuffer = nullptr;
 	XMFLOAT2 m_BiomeMapTopLeft{ 0, 0 };
 	float m_BiomeMapScale = 8.0f;
+	float m_BiomeBlending = 0.5f;
 };

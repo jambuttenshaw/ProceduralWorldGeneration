@@ -49,20 +49,9 @@ struct RidgeNoiseSettings
 	void LoadFromJson(const nlohmann::json& data);
 };
 
-struct WarpedSimpleNoiseSettings
-{
-	SimpleNoiseSettings WarpSettings;
-	SimpleNoiseSettings NoiseSettings;
-
-	bool SettingsGUI();
-	nlohmann::json Serialize() const;
-	void LoadFromJson(const nlohmann::json& data);
-};
-
 
 struct TerrainNoiseSettings
 {
-	SimpleNoiseSettings WarpSettings;
 	SimpleNoiseSettings ContinentSettings;
 	RidgeNoiseSettings MountainSettings;
 

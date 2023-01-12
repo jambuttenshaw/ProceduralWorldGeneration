@@ -39,22 +39,40 @@ bool BiomeGenerator::SettingsGUI()
 {
 	bool changed = false;
 
+	ImGui::Separator();
+
 	ImGui::Text("Biome map size: %d", m_BiomeMapSize);
 	ImGui::Text("Mapping:");
 	changed |= ImGui::DragFloat2("Top Left", &m_BiomeMapTopLeft.x, 0.01f);
 	changed |= ImGui::DragFloat("Scale", &m_BiomeMapScale, 0.01f);
+	changed |= ImGui::SliderFloat("Blending", &m_BiomeBlending, 0.01f, 1.0f);
 	
+	ImGui::Separator();
 	ImGui::Text("Biome Settings:");
-	int biomeIndex = 0;
-	for (auto& biome : m_AllBiomes)
-	{
-		if (ImGui::TreeNode(biome.name))
+
+	static int selectedBiome = 0;
+	struct FuncHolder { // to allow inline function declaration
+		static bool ItemGetter(void* data, int idx, const char** out_str)
 		{
-			changed |= m_GenerationSettings[biomeIndex].SettingsGUI();
-			ImGui::TreePop();
+			*out_str = ((Biome*)data + idx)->name;
+			return true;
 		}
-		biomeIndex++;
-	}
+	};
+
+	ImGui::Combo("Biome", &selectedBiome, &FuncHolder::ItemGetter, m_AllBiomes.data(), static_cast<int>(m_AllBiomes.size()));
+
+	Biome& biome = m_AllBiomes.at(selectedBiome);
+	ImGui::Separator();
+	ImGui::Text("%s Biome Properties:", biome.name);
+	ImGui::Text("Type: %s", StrFromBiomeType(biome.type));
+	ImGui::Text("Temperature: %s", StrFromBiomeTemp(biome.temperature));
+	ImGui::Text("Spawn weight: %d", biome.spawnWeight);
+
+	ImGui::Separator();
+	ImGui::Text("Heightmap Generation:");
+	changed |= m_GenerationSettings[selectedBiome].SettingsGUI();
+
+	ImGui::Separator();
 
 	return changed;
 }
@@ -65,6 +83,7 @@ nlohmann::json BiomeGenerator::Serialize() const
 
 	serialized["biomeMapTopLeft"] = SerializationHelper::SerializeFloat2(m_BiomeMapTopLeft);
 	serialized["biomeMapScale"] = m_BiomeMapScale;
+	serialized["biomeBlending"] = m_BiomeBlending;
 
 	serialized["generationSettings"] = nlohmann::json::array();
 	for (int i = 0; i < m_AllBiomes.size(); i++)
@@ -79,6 +98,7 @@ void BiomeGenerator::LoadFromJson(const nlohmann::json& data)
 {
 	if (data.contains("biomeMapTopLeft")) SerializationHelper::LoadFloat2FromJson(&m_BiomeMapTopLeft, data["biomeMapTopLeft"]);
 	if (data.contains("biomeMapScale")) m_BiomeMapScale = data["biomeMapScale"];
+	if (data.contains("biomeBlending")) m_BiomeBlending = data["biomeBlending"];
 
 	if (data.contains("generationSettings"))
 	{
@@ -423,20 +443,6 @@ void BiomeGenerator::CreateBiomeMapTexture(ID3D11Device* device)
 	hr = device->CreateShaderResourceView(tex, &srvDesc, &m_BiomeMapSRV);
 	assert(hr == S_OK);
 
-	D3D11_SAMPLER_DESC samplerDesc;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.MaxAnisotropy = 1;
-	samplerDesc.MaxLOD = 0;
-	samplerDesc.MinLOD = D3D11_FLOAT32_MAX;
-	samplerDesc.MipLODBias = 0;
-
-	hr = device->CreateSamplerState(&samplerDesc, &m_BiomeMapSampler);
-	assert(hr == S_OK);
-
 	D3D11_BUFFER_DESC bufferDesc;
 	bufferDesc.ByteWidth = sizeof(BiomeMappingBufferType);
 	bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -445,7 +451,13 @@ void BiomeGenerator::CreateBiomeMapTexture(ID3D11Device* device)
 	bufferDesc.MiscFlags = 0;
 	bufferDesc.StructureByteStride = 0;
 
-	BiomeMappingBufferType bmbt{ m_BiomeMapTopLeft, m_BiomeMapScale, static_cast<unsigned int>(m_BiomeMapSize) };
+	BiomeMappingBufferType bmbt{ 
+		m_BiomeMapTopLeft, 
+		m_BiomeMapScale, 
+		static_cast<unsigned int>(m_BiomeMapSize),
+		m_BiomeBlending,
+		{ 0.0f, 0.0f, 0.0f }
+	};
 	initialData.pSysMem = &bmbt;
 
 	hr = device->CreateBuffer(&bufferDesc, &initialData, &m_BiomeMappingBuffer);
@@ -494,8 +506,30 @@ void BiomeGenerator::UpdateBuffers(ID3D11DeviceContext* deviceContext)
 	hr = deviceContext->Map(m_BiomeMappingBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	assert(hr == S_OK);
 	BiomeMappingBufferType* dataPtr = reinterpret_cast<BiomeMappingBufferType*>(mappedResource.pData);
-	dataPtr->biomeMapTopleft = m_BiomeMapTopLeft;
-	dataPtr->biomeMapScale = m_BiomeMapScale;
-	dataPtr->biomeMapResolution = static_cast<unsigned int>(m_BiomeMapSize);
+	dataPtr->topleft = m_BiomeMapTopLeft;
+	dataPtr->scale = m_BiomeMapScale;
+	dataPtr->resolution = static_cast<unsigned int>(m_BiomeMapSize);
+	dataPtr->blending = m_BiomeBlending;
 	deviceContext->Unmap(m_BiomeMappingBuffer, 0);
+}
+
+
+const char* BiomeGenerator::StrFromBiomeType(BIOME_TYPE type)
+{
+	switch (type)
+	{
+	case BIOME_TYPE_OCEAN:	return "Ocean";
+	case BIOME_TYPE_LAND:	return "Land";
+	default:				return "Unknown";
+	}
+}
+const char* BiomeGenerator::StrFromBiomeTemp(BIOME_TEMP temp)
+{
+	switch (temp)
+	{
+	case BIOME_TEMP_TEMPERATE:	return "Temperate";
+	case BIOME_TEMP_COLD:		return "Cold";
+	case BIOME_TEMP_WARM:		return "Warm";
+	default:					return "Unknown";
+	}
 }

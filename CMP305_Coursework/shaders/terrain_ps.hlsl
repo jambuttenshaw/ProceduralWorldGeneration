@@ -1,12 +1,12 @@
 // Terrain Pixel Shader
 
+#include "biomeHelper.hlsli"
 #include "math.hlsli"
 
 Texture2D heightmap : register(t0);
 Texture2D biomeMap : register(t1);
 
 SamplerState heightmapSampler : register(s0);
-SamplerState biomeMapSampler : register(s1);
 
 cbuffer LightBuffer : register(b0)
 {
@@ -28,9 +28,7 @@ cbuffer TerrainBuffer : register(b1)
 }
 cbuffer BiomeMappingBuffer : register(b2)
 {
-    float2 biomeMapTopLeft;
-    float biomeMapScale;
-    float padding3;
+    BiomeMappingBuffer mappingBuffer;
 };
 
 struct InputType
@@ -88,6 +86,11 @@ float4 main(InputType input) : SV_TARGET
 	
     // lighting:
     float4 lightColour = ambientColour + calculateDiffuse(-normalize(lightDirection), normal, diffuseColour);
+    
+    // biome:
+    uint2 biomeMapUV = GetBiomeMapLocation(worldOffset + input.tex, mappingBuffer);
+    int biome = asint(biomeMap.Load(uint3(biomeMapUV, 0)).r);
+    float2 biomeBlend = GetBiomeBlend(worldOffset + input.tex, mappingBuffer);
     
     // steepness:
     // global up is always (0, 1, 0), so dot(normal, worldNormal) simplifies to normal.y

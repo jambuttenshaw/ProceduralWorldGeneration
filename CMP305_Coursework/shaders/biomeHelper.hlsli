@@ -1,6 +1,39 @@
 
-
-int GetBiome(Texture2D biomeMap, SamplerState biomeMapSampler, float2 offset, float2 uv)
+struct BiomeMappingBuffer
 {
-    return 0;
+    float2 topLeft;
+    float scale;
+    uint resolution;
+    float blending;
+    float3 padding;
+};
+
+// returns uv of the entire biome map
+float2 GetBiomeMapUV(float2 pos, BiomeMappingBuffer mappingBuffer)
+{
+    return (pos - mappingBuffer.topLeft) / mappingBuffer.scale;
+}
+
+uint2 GetBiomeMapLocation(float2 pos, BiomeMappingBuffer mappingBuffer)
+{
+    return (mappingBuffer.resolution - 1) * GetBiomeMapUV(pos, mappingBuffer);
+}
+
+// retuns uv within the biome
+float2 GetBiomeUV(float2 pos, BiomeMappingBuffer mappingBuffer)
+{
+    return frac(float(mappingBuffer.resolution - 1) * GetBiomeMapUV(pos, mappingBuffer));
+}
+
+// get how much of this biome should be blended with neighbours
+float2 GetBiomeBlend(float2 pos, BiomeMappingBuffer mappingBuffer)
+{
+    float2 biomeUV = GetBiomeUV(pos, mappingBuffer);
+    
+    float2 biomeBlend = float2(0.0f, 0.0f);
+    
+    biomeBlend += step(biomeUV, 0.5f) * (smoothstep(0.0f, 1.0f, biomeUV / mappingBuffer.blending + 0.5f) - 1.0f);
+    biomeBlend += step(0.5f, biomeUV) * smoothstep(0.0f, 1.0f, (biomeUV * (1 + mappingBuffer.blending) - 1.0f) / (2.0f * mappingBuffer.blending));
+    
+    return biomeBlend;
 }

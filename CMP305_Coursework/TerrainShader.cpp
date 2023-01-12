@@ -154,8 +154,7 @@ void TerrainShader::SetShaderParameters(ID3D11DeviceContext* deviceContext,
 	deviceContext->PSSetConstantBuffers(0, 3, psCBs);
 	ID3D11ShaderResourceView* psSRVs[] = { heightmapSRV, biomeGenerator->GetBiomeMapSRV() };
 	deviceContext->PSSetShaderResources(0, 2, psSRVs);
-	ID3D11SamplerState* psSamplers[] = { m_HeightmapSampleState, biomeGenerator->GetBiomeMapSampler() };
-	deviceContext->PSSetSamplers(0, 2, psSamplers);
+	deviceContext->PSSetSamplers(0, 1, &m_HeightmapSampleState);
 }
 
 void TerrainShader::Render(ID3D11DeviceContext* deviceContext, unsigned int indexCount)

@@ -1,4 +1,5 @@
 #include "noiseFunctions.hlsli"
+#include "biomeHelper.hlsli"
 #include "math.hlsli"
 
 RWTexture2D<float4> gHeightmap : register(u0);
@@ -15,9 +16,29 @@ cbuffer WorldBuffer : register(b0)
 }
 cbuffer BiomeMappingBuffer : register(b1)
 {
-    float2 biomeMapTopLeft;
-    float biomeMapScale;
-    uint biomeMapResolution;
+    BiomeMappingBuffer mappingBuffer;
+}
+
+float evalTerrainNoise(float2 inputPos, TerrainNoiseSettings terrainSettings)
+{
+    // apply warping
+    float2 pos = inputPos;
+    //pos += float2(SimpleNoise(inputPos + float2(17.13f, 23.7f), terrainSettings.warpSettings),
+    //              SimpleNoise(inputPos - float2(17.13f, 23.7f), terrainSettings.warpSettings));
+    
+    // create continent shape
+    float continentShape = SimpleNoise(pos, terrainSettings.continentSettings);
+    // create mountains
+    float mountainShape = SmoothedRidgeNoise(pos, terrainSettings.mountainSettings);
+    // mountains shouldn't stick out of the oceans as much
+    float mountainMask = smoothstep(-terrainSettings.mountainBlend - terrainSettings.oceanFloorDepth, 0.0f, continentShape);
+    
+    // apply ocean floor
+    continentShape = smoothMax(continentShape, -terrainSettings.oceanFloorDepth, terrainSettings.oceanFloorSmoothing);
+    if (continentShape < 0)
+        continentShape *= 1 + terrainSettings.oceanDepthMultiplier;
+    
+    return continentShape + (mountainShape * mountainMask);
 }
 
 
@@ -33,29 +54,35 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float2 uv = float2(dispatchThreadID.xy) / float2(heightmapDims - float2(1, 1));
     float2 pos = uv + offset;
     
-    uint2 biomeMapUV = (biomeMapResolution - 1) * (pos - biomeMapTopLeft) / biomeMapScale;
-    int biome = asint(gBiomeMap.Load(uint3(biomeMapUV, 0.0f)).r);
-    TerrainNoiseSettings terrainSettings = gGenerationSettingsBuffer[biome];
+    uint2 biomeMapUV = GetBiomeMapLocation(pos, mappingBuffer);
+    float2 biomeBlending = GetBiomeBlend(pos, mappingBuffer);
     
-    // apply warping
-    pos += float2(SimpleNoise(pos + float2(17.13f, 23.7f), terrainSettings.warpSettings),
-                 SimpleNoise(pos - float2(17.13f, 23.7f), terrainSettings.warpSettings));
-    
-    // create continent shape
-    float continentShape = SimpleNoise(pos, terrainSettings.continentSettings);
-    // create mountains
-    float mountainShape = SmoothedRidgeNoise(pos, terrainSettings.mountainSettings);
-    // mountains shouldn't stick out of the oceans as much
-    float mountainMask = smoothstep(-terrainSettings.mountainBlend - terrainSettings.oceanFloorDepth, 0.0f, continentShape);
-    
-    // apply ocean floor
-    continentShape = smoothMax(continentShape, -terrainSettings.oceanFloorDepth, terrainSettings.oceanFloorSmoothing);
-    if (continentShape < 0)
-        continentShape *= 1 + terrainSettings.oceanDepthMultiplier;
-    
-    float finalShape = continentShape + (mountainShape * mountainMask);
+    float terrainHeight = 0.0f;
+    if (length(biomeBlending) == 0.0f)
+    {
+        int biome = asint(gBiomeMap.Load(uint3(biomeMapUV, 0)).r);
+        terrainHeight = evalTerrainNoise(pos, gGenerationSettingsBuffer[biome]);
+    }
+    else
+    {
+        int b1 = asint(gBiomeMap.Load(uint3(biomeMapUV + uint2(0, 0), 0)).r);
+        int b2 = asint(gBiomeMap.Load(uint3(biomeMapUV + uint2(sign(biomeBlending.x), 0), 0)).r);
+        int b3 = asint(gBiomeMap.Load(uint3(biomeMapUV + uint2(0, sign(biomeBlending.y)), 0)).r);
+        int b4 = asint(gBiomeMap.Load(uint3(biomeMapUV + uint2(sign(biomeBlending.x), sign(biomeBlending.y)), 0)).r);
+        
+        float h1 = evalTerrainNoise(pos, gGenerationSettingsBuffer[b1]);
+        float h2 = b2 == b1 ? h1 : evalTerrainNoise(pos, gGenerationSettingsBuffer[b2]);
+        float h3 = b3 == b1 ? h1 : evalTerrainNoise(pos, gGenerationSettingsBuffer[b3]);
+        float h4 = b4 == b1 ? h1 : evalTerrainNoise(pos, gGenerationSettingsBuffer[b4]);
+        
+        terrainHeight = lerp(
+            lerp(h1, h3, abs(biomeBlending.y)),
+            lerp(h2, h4, abs(biomeBlending.y)),
+            abs(biomeBlending.x)
+        );
+    }
     
     float4 v = gHeightmap[dispatchThreadID.xy];
-    v.r = finalShape;
+    v.r = terrainHeight;
     gHeightmap[dispatchThreadID.xy] = v;
 }

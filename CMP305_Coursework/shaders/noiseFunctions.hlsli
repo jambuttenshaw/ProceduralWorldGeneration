@@ -35,7 +35,6 @@ struct RidgeNoiseSettings
 
 struct TerrainNoiseSettings
 {
-    SimpleNoiseSettings warpSettings;
     SimpleNoiseSettings continentSettings;
     RidgeNoiseSettings mountainSettings;
     
