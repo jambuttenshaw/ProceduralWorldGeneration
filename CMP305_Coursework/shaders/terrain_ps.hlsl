@@ -5,6 +5,7 @@
 
 Texture2D heightmap : register(t0);
 Texture2D biomeMap : register(t1);
+Texture2D biomeTans : register(t2);
 
 SamplerState heightmapSampler : register(s0);
 

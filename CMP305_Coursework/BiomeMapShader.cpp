@@ -71,7 +71,7 @@ void BiomeMapShader::setShaderParameters(ID3D11DeviceContext* deviceContext, con
 		HRESULT hr = deviceContext->Map(m_BiomeColourBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 		assert(hr == S_OK);
 		BiomeColourBufferType* dataPtr = (BiomeColourBufferType*)mappedResource.pData;
-		memcpy(dataPtr->biomeColours, biomeGenerator->GetBiomeColours(), sizeof(XMFLOAT4) * MAX_BIOMES);
+		memcpy(dataPtr->biomeColours, biomeGenerator->GetBiomeMinimapColours(), sizeof(XMFLOAT4) * MAX_BIOMES);
 		dataPtr->worldMinPos = worldMinPos;
 		dataPtr->worldSize = worldSize;
 		deviceContext->Unmap(m_BiomeColourBuffer, 0);

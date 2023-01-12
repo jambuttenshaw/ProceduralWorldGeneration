@@ -28,8 +28,8 @@ float4 main(InputType input) : SV_TARGET
     const float3 borderColour = float3(1.0f, 0.0f, 0.0f);
     const float borderThickness = 0.01f;
     
-    //float2 uv = float2(input.tex.x, 1.0f - input.tex.y);
-    float2 uv = input.tex;
+    // flip y axis makes it easier to understand
+    float2 uv = float2(input.tex.x, 1.0f - input.tex.y);
     
     float2 worldMin = GetBiomeMapUV(worldMinPos, mappingBuffer);
     float2 worldMax = GetBiomeMapUV(worldMinPos + worldSize, mappingBuffer);

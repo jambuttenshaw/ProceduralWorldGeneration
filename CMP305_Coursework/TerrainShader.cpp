@@ -152,8 +152,8 @@ void TerrainShader::SetShaderParameters(ID3D11DeviceContext* deviceContext,
 
 	ID3D11Buffer* psCBs[] = { m_LightBuffer, m_TerrainBuffer, biomeGenerator->GetBiomeMappingBuffer() };
 	deviceContext->PSSetConstantBuffers(0, 3, psCBs);
-	ID3D11ShaderResourceView* psSRVs[] = { heightmapSRV, biomeGenerator->GetBiomeMapSRV() };
-	deviceContext->PSSetShaderResources(0, 2, psSRVs);
+	ID3D11ShaderResourceView* psSRVs[] = { heightmapSRV, biomeGenerator->GetBiomeMapSRV(), biomeGenerator->GetBiomeTanningSRV() };
+	deviceContext->PSSetShaderResources(0, 3, psSRVs);
 	deviceContext->PSSetSamplers(0, 1, &m_HeightmapSampleState);
 }
 

@@ -55,7 +55,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	light->setSpecularColour(lightSpecular.x, lightSpecular.y, lightSpecular.z, 1.0f);
 	light->setDirection(lightDir.x, lightDir.y, lightDir.z);
 
-	m_BiomeGenerator = new BiomeGenerator(0);
+	m_BiomeGenerator = new BiomeGenerator(renderer->getDevice(), 1);
 	m_BiomeGenerator->GenerateBiomeMap(renderer->getDevice());
 	m_HeightmapFilter = new HeightmapFilter(renderer->getDevice(), L"terrainNoise_cs.cso");
 

@@ -42,6 +42,14 @@ class BiomeGenerator
 		// generation settings specific to this biome are stored in the Generation Settings buffer
 	};
 
+	struct BiomeTan
+	{
+		XMFLOAT4 shoreColour;
+		XMFLOAT4 flatColour;
+		XMFLOAT4 steepColour;
+		XMFLOAT4 cliffColour;
+	};
+
 	struct BiomeMappingBufferType
 	{
 		XMFLOAT2 topleft;
@@ -52,7 +60,7 @@ class BiomeGenerator
 	};
 
 public:
-	BiomeGenerator(unsigned int seed);
+	BiomeGenerator(ID3D11Device* device, unsigned int seed);
 	~BiomeGenerator();
 
 	bool SettingsGUI();
@@ -69,7 +77,8 @@ public:
 	inline ID3D11Buffer* GetBiomeMappingBuffer() const { return m_BiomeMappingBuffer; }
 	
 	inline ID3D11ShaderResourceView* GetGenerationSettingsSRV() const { return m_GenerationSettingsView; }
-	inline const XMFLOAT4* GetBiomeColours() const { return m_BiomeColours; }
+	inline ID3D11ShaderResourceView* GetBiomeTanningSRV() const { return m_BiomeTanView; }
+	inline const XMFLOAT4* GetBiomeMinimapColours() const { return m_BiomeMinimapColours; }
 
 	void UpdateBuffers(ID3D11DeviceContext* deviceContext);
 
@@ -95,6 +104,7 @@ private:
 
 	void CreateBiomeMapTexture(ID3D11Device* device);
 	void CreateGenerationSettingsBuffer(ID3D11Device* device);
+	void CreateBiomeTanBuffer(ID3D11Device* device);
 
 	inline bool Chance(int percent) { return m_Chance(m_RNG) <= percent; }
 
@@ -111,11 +121,6 @@ private:
 	std::vector<int> m_WarmBiomes;
 	std::map<BIOME_TEMP, std::vector<int>*> m_BiomesByTemp;
 
-	XMFLOAT4 m_BiomeColours[MAX_BIOMES];
-	TerrainNoiseSettings m_GenerationSettings[MAX_BIOMES];
-	ID3D11Buffer* m_GenerationSettingsBuffer = nullptr;
-	ID3D11ShaderResourceView* m_GenerationSettingsView = nullptr;
-
 	int* m_BiomeMap = nullptr;
 	size_t m_BiomeMapSize = -1;
 	ID3D11ShaderResourceView* m_BiomeMapSRV = nullptr;
@@ -123,8 +128,18 @@ private:
 	int* m_TemperatureMap = nullptr;
 	size_t m_TemperatureMapSize = -1;
 
+	TerrainNoiseSettings m_GenerationSettings[MAX_BIOMES];
+	ID3D11Buffer* m_GenerationSettingsBuffer = nullptr;
+	ID3D11ShaderResourceView* m_GenerationSettingsView = nullptr;
+
+	BiomeTan m_BiomeTans[MAX_BIOMES];
+	ID3D11Buffer* m_BiomeTanBuffer = nullptr;
+	ID3D11ShaderResourceView* m_BiomeTanView = nullptr;
+
 	ID3D11Buffer* m_BiomeMappingBuffer = nullptr;
 	XMFLOAT2 m_BiomeMapTopLeft{ 0, 0 };
 	float m_BiomeMapScale = 8.0f;
 	float m_BiomeBlending = 0.5f;
+
+	XMFLOAT4 m_BiomeMinimapColours[MAX_BIOMES];
 };
