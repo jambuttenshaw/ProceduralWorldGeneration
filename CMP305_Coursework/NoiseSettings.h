@@ -13,7 +13,7 @@ using namespace DirectX;
 struct SimpleNoiseSettings
 {
 	// 16 bytes
-	float Elevation = 1.0f;
+	float Elevation = 0.0f;
 	float Frequency = 1.0f;
 	float VerticalShift = 0.0f;
 	int Octaves = 4;
@@ -30,7 +30,7 @@ struct SimpleNoiseSettings
 struct RidgeNoiseSettings
 {
 	// 16 bytes
-	float Elevation = 8.0f;
+	float Elevation = 0.0f;
 	float Frequency = 0.5f;
 	float VerticalShift = 0.0f;
 	int Octaves = 8;

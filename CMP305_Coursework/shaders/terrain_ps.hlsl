@@ -19,13 +19,8 @@ cbuffer LightBuffer : register(b0)
 
 cbuffer TerrainBuffer : register(b1)
 {
-    float flatThreshold;
-    float cliffThreshold;
-    float steepnessSmoothing;
-    float padding1;
-    
     float2 worldOffset;
-    float2 padding2;
+    float2 padding1;
 }
 cbuffer BiomeMappingBuffer : register(b2)
 {
@@ -99,18 +94,18 @@ float4 main(InputType input) : SV_TARGET
     // global up is always (0, 1, 0), so dot(normal, worldNormal) simplifies to normal.y
     float steepness = 1 - normal.y;
     
-    float transitionA = steepnessSmoothing * (1 - flatThreshold);
-    float transitionB = steepnessSmoothing * (1 - cliffThreshold);
+    float transitionA = biomeTan.steepnessSmoothing * (1 - biomeTan.flatThreshold);
+    float transitionB = biomeTan.steepnessSmoothing * (1 - biomeTan.cliffThreshold);
     
     float steepnessStrength = 0.5f * (
-        smoothstep(flatThreshold - transitionA, flatThreshold + transitionA, steepness) +
-        smoothstep(cliffThreshold - transitionB, cliffThreshold + transitionB, steepness)
+        smoothstep(biomeTan.flatThreshold - transitionA, biomeTan.flatThreshold + transitionA, steepness) +
+        smoothstep(biomeTan.cliffThreshold - transitionB, biomeTan.cliffThreshold + transitionB, steepness)
     );
     
     // biome colouring
     float3 groundColour;
     
-    float shoreMix = 1 - smoothstep(0, 1.5f, input.worldPosition.y);
+    float shoreMix = 1 - smoothstep(0, biomeTan.shoreHeight, input.worldPosition.y);
     groundColour = lerp(biomeTan.flatColour, biomeTan.shoreColour, shoreMix);
     
     

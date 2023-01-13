@@ -19,7 +19,7 @@ TerrainShader::~TerrainShader()
 	
 	if (m_MatrixBuffer) m_MatrixBuffer->Release();
 	if (m_LightBuffer) m_LightBuffer->Release();
-	if (m_TerrainBuffer) m_TerrainBuffer->Release();
+	if (m_WorldBuffer) m_WorldBuffer->Release();
 
 	if (m_HeightmapSampleState) m_HeightmapSampleState->Release();
 }
@@ -33,7 +33,7 @@ void TerrainShader::InitShader()
 	// create constant buffers
 	CreateBuffer(sizeof(MatrixBufferType), &m_MatrixBuffer);
 	CreateBuffer(sizeof(LightBufferType), &m_LightBuffer);
-	CreateBuffer(sizeof(TerrainBufferType), &m_TerrainBuffer);
+	CreateBuffer(sizeof(WorldBufferType), &m_WorldBuffer);
 
 	// create sampler state
 	D3D11_SAMPLER_DESC heightmapSamplerDesc;
@@ -136,13 +136,10 @@ void TerrainShader::SetShaderParameters(ID3D11DeviceContext* deviceContext,
 		deviceContext->Unmap(m_LightBuffer, 0);
 	}
 	{
-		deviceContext->Map(m_TerrainBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-		TerrainBufferType* dataPtr = (TerrainBufferType*)mappedResource.pData;
-		dataPtr->flatThreshold = m_FlatThreshold;
-		dataPtr->cliffThreshold = m_CliffThreshold;
-		dataPtr->steepnessSmoothing = m_SteepnessSmoothing;
+		deviceContext->Map(m_WorldBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		WorldBufferType* dataPtr = (WorldBufferType*)mappedResource.pData;
 		dataPtr->worldOffset = heightmap->GetOffset();
-		deviceContext->Unmap(m_TerrainBuffer, 0);
+		deviceContext->Unmap(m_WorldBuffer, 0);
 	}
 
 	deviceContext->VSSetConstantBuffers(0, 1, &m_MatrixBuffer);
@@ -150,7 +147,7 @@ void TerrainShader::SetShaderParameters(ID3D11DeviceContext* deviceContext,
 	deviceContext->VSSetShaderResources(0, 1, &heightmapSRV);
 	deviceContext->VSSetSamplers(0, 1, &m_HeightmapSampleState);
 
-	ID3D11Buffer* psCBs[] = { m_LightBuffer, m_TerrainBuffer, biomeGenerator->GetBiomeMappingBuffer() };
+	ID3D11Buffer* psCBs[] = { m_LightBuffer, m_WorldBuffer, biomeGenerator->GetBiomeMappingBuffer() };
 	deviceContext->PSSetConstantBuffers(0, 3, psCBs);
 	ID3D11ShaderResourceView* psSRVs[] = { heightmapSRV, biomeGenerator->GetBiomeMapSRV(), biomeGenerator->GetBiomeTanningSRV() };
 	deviceContext->PSSetShaderResources(0, 3, psSRVs);
@@ -168,30 +165,4 @@ void TerrainShader::Render(ID3D11DeviceContext* deviceContext, unsigned int inde
 
 	deviceContext->VSSetShader(nullptr, nullptr, 0);
 	deviceContext->PSSetShader(nullptr, nullptr, 0);
-}
-
-void TerrainShader::GUI()
-{
-	ImGui::Text("Steepness-based Tanning:");
-	ImGui::SliderFloat("Flat Threshold", &m_FlatThreshold, 0.0f, m_CliffThreshold);
-	ImGui::SliderFloat("Cliff Threshold", &m_CliffThreshold, m_FlatThreshold, 1.0f);
-	ImGui::SliderFloat("Steepness Smoothing", &m_SteepnessSmoothing, 0.0f, 0.2f);
-}
-
-nlohmann::json TerrainShader::Serialize() const
-{
-	nlohmann::json serialized;
-
-	serialized["flatThreshold"] = m_FlatThreshold;
-	serialized["cliffThreshold"] = m_CliffThreshold;
-	serialized["steepnessSmoothing"] = m_SteepnessSmoothing;
-
-	return serialized;
-}
-
-void TerrainShader::LoadFromJson(const nlohmann::json& data)
-{
-	if (data.contains("flatThreshold")) m_FlatThreshold = data["flatThreshold"];
-	if (data.contains("cliffThreshold")) m_CliffThreshold = data["cliffThreshold"];
-	if (data.contains("steepnessSmoothing")) m_SteepnessSmoothing = data["steepnessSmoothing"];
 }

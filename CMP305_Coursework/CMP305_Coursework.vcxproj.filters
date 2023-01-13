@@ -31,9 +31,6 @@
     <Filter Include="Shaders\Include">
       <UniqueIdentifier>{14c6cedd-4e54-463a-85f1-3843eb04202d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\Compute">
-      <UniqueIdentifier>{8a335592-4fbe-4f78-a722-170ce78737eb}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders\Water">
       <UniqueIdentifier>{df3d322c-9282-458d-ab9a-c4e507be56dd}</UniqueIdentifier>
     </Filter>
@@ -193,18 +190,6 @@
     <FxCompile Include="shaders\terrain_ps.hlsl">
       <Filter>Shaders\Terrain</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\ridgeNoise_cs.hlsl">
-      <Filter>Shaders\Compute</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\simpleNoise_cs.hlsl">
-      <Filter>Shaders\Compute</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\terrainNoise_cs.hlsl">
-      <Filter>Shaders\Compute</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\warpedSimpleNoise_cs.hlsl">
-      <Filter>Shaders\Compute</Filter>
-    </FxCompile>
     <FxCompile Include="shaders\water_ps.hlsl">
       <Filter>Shaders\Water</Filter>
     </FxCompile>
@@ -215,6 +200,9 @@
       <Filter>Shaders\Terrain</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\biomeMap_ps.hlsl">
+      <Filter>Shaders\Terrain</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\terrainNoise_cs.hlsl">
       <Filter>Shaders\Terrain</Filter>
     </FxCompile>
   </ItemGroup>

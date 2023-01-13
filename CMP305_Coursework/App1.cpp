@@ -44,9 +44,14 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	createTerrain({ 100.0f, 0.0f, 0.0f });
 	createTerrain({ 0.0f, 0.0f, 100.0f });
 	createTerrain({ 100.0f, 0.0f, 100.0f });
+	createTerrain({ 200.0f, 0.0f, 000.0f });
+	createTerrain({ 200.0f, 0.0f, 100.0f });
+	createTerrain({ 200.0f, 0.0f, 200.0f });
+	createTerrain({ 100.0f, 0.0f, 200.0f });
+	createTerrain({ 000.0f, 0.0f, 200.0f });
 
 	m_WorldMinPos = { 0, 0 };
-	m_WorldSize = { 2, 2 };
+	m_WorldSize = { 3, 3 };
 
 	// Initialise light
 	light = new Light();
@@ -318,7 +323,6 @@ void App1::gui()
 				if (m_BiomeGenerator->TanningSettingsGUI())
 					m_BiomeGenerator->UpdateBuffers(renderer->getDeviceContext()); // update tanning buffer
 			}
-			m_TerrainShader->GUI();
 
 			ImGui::TreePop();
 		}
@@ -365,7 +369,6 @@ void App1::saveSettings(const std::string& file)
 	serialized["lightSpecular"] = SerializationHelper::SerializeFloat3(lightSpecular);
 
 	serialized["waterSettings"] = m_WaterShader->Serialize();
-	serialized["terrainSettings"] = m_TerrainShader->Serialize();
 
 	std::string serializedString = serialized.dump();
 	std::ofstream outfile(file);
@@ -396,5 +399,4 @@ void App1::loadSettings(const std::string& file)
 	light->setDirection(lightDir.x, lightDir.y, lightDir.z);
 
 	if (data.contains("waterSettings")) m_WaterShader->LoadFromJson(data["waterSettings"]);
-	if (data.contains("terrainSettings")) m_TerrainShader->LoadFromJson(data["terrainSettings"]);
 }

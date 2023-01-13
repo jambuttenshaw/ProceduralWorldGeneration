@@ -73,7 +73,7 @@ bool RidgeNoiseSettings::SettingsGUI()
 	ImGui::Text("Ridge Settings");
 	changed |= ImGui::DragFloat("Power", &Power, 0.01f);
 	changed |= ImGui::DragFloat("Gain", &Gain, 0.01f);
-	changed |= ImGui::SliderFloat("Peak Smoothing", &PeakSmoothing, 0.0f, 0.5f);
+	changed |= ImGui::DragFloat("Peak Smoothing", &PeakSmoothing, 0.01f);
 
 	return changed;
 }

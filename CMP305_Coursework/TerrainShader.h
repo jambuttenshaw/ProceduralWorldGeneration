@@ -26,15 +26,10 @@ private:
 		XMFLOAT3 direction;
 		float padding;
 	};
-	struct TerrainBufferType
+	struct WorldBufferType
 	{
-		float flatThreshold;
-		float cliffThreshold;
-		float steepnessSmoothing;
-		float padding;
-
 		XMFLOAT2 worldOffset;
-		XMFLOAT2 padding1;
+		XMFLOAT2 padding;
 	};
 
 
@@ -47,11 +42,6 @@ public:
 								Heightmap* heightmap, const BiomeGenerator* biomeGeneration,
 								Light* light);
 	void Render(ID3D11DeviceContext* deviceContext, unsigned int indexCount);
-
-	void GUI();
-
-	nlohmann::json Serialize() const;
-	void LoadFromJson(const nlohmann::json& data);
 
 private:
 	void InitShader();
@@ -71,13 +61,8 @@ private:
 
 	ID3D11Buffer* m_MatrixBuffer = nullptr;			// matrices to be sent to vertex shader
 	ID3D11Buffer* m_LightBuffer = nullptr;			// lighting data
-	ID3D11Buffer* m_TerrainBuffer = nullptr;		// terrain data
+	ID3D11Buffer* m_WorldBuffer = nullptr;		// terrain data
 
 	ID3D11SamplerState* m_HeightmapSampleState = nullptr;
-
-	// terrain properties
-	float m_FlatThreshold = 0.5f;
-	float m_CliffThreshold = 0.8f;
-	float m_SteepnessSmoothing = 0.1f;
 };
 

@@ -14,6 +14,11 @@ struct BiomeTan
     float3 flatColour;
     float3 slopeColour;
     float3 cliffColour;
+    
+    float flatThreshold;
+    float cliffThreshold;
+    float shoreHeight;
+    float steepnessSmoothing;
 };
 
 // returns uv of the entire biome map
@@ -55,6 +60,12 @@ BiomeTan BlendTans(BiomeTan a, BiomeTan b, float t)
     blended.flatColour  = lerp(a.flatColour,  b.flatColour,  t);
     blended.slopeColour = lerp(a.slopeColour, b.slopeColour, t);
     blended.cliffColour = lerp(a.cliffColour, b.cliffColour, t);
+    
+    blended.flatThreshold = lerp(a.flatThreshold, b.flatThreshold, t);
+    blended.cliffThreshold = lerp(a.cliffThreshold, b.cliffThreshold, t);
+    blended.shoreHeight = lerp(a.shoreHeight, b.shoreHeight, t);
+    blended.steepnessSmoothing = lerp(a.steepnessSmoothing, b.steepnessSmoothing, t);
+    
     return blended;
 }
 

@@ -1,4 +1,5 @@
 #include "noiseSimplex.hlsli"
+#include "math.hlsli"
 
 // NOISE SETTINGS STRUCT DEFINITIONS
 
@@ -104,4 +105,40 @@ float SmoothedRidgeNoise(float2 pos, RidgeNoiseSettings settings)
     float sample8 = RidgeNoise(pos - float2(-offset, offset), settings);
     
     return (sample0 + sample1 + sample2 + sample3 + sample4 + sample5 + sample6 + sample7 + sample8) / 9.0f;
+}
+
+float NewRidgeNoise(float2 pos, RidgeNoiseSettings settings)
+{
+    float noiseSum = 0.0f;
+    float f = settings.frequency;
+    float a = 1.0f;
+    float ridgeWeight = 1.0f;
+    
+    for (int octave = 0; octave < settings.octaves; octave++)
+    {
+        float noiseVal1 = abs(snoise(f * pos + settings.offset));
+        float noiseVal2 = noiseVal1 * (1.0f - smoothstep(0, noiseVal1, settings.gain));
+        
+        noiseSum += noiseVal2 * a;
+        
+        f *= settings.lacunarity;
+        a *= settings.persistence * (1.0f - smoothstep(0, noiseVal1, settings.peakSmoothing));
+    }
+    
+    return noiseSum * settings.elevation + settings.verticalShift;
+}
+
+float TerrainNoise(float2 pos, TerrainNoiseSettings terrainSettings)
+{
+    // create continent shape
+    float continentShape = SimpleNoise(pos, terrainSettings.continentSettings);
+    // create mountains
+    float mountainShape = NewRidgeNoise(pos, terrainSettings.mountainSettings);
+    
+    // apply ocean floor
+    continentShape = smoothMax(continentShape, -terrainSettings.oceanFloorDepth, terrainSettings.oceanFloorSmoothing);
+    if (continentShape < 0)
+        continentShape *= 1 + terrainSettings.oceanDepthMultiplier;
+    
+    return continentShape + mountainShape;
 }

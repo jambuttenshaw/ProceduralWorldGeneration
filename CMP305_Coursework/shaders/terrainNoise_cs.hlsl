@@ -1,6 +1,5 @@
 #include "noiseFunctions.hlsli"
 #include "biomeHelper.hlsli"
-#include "math.hlsli"
 
 RWTexture2D<float4> gHeightmap : register(u0);
 
@@ -19,23 +18,6 @@ cbuffer BiomeMappingBuffer : register(b1)
     BiomeMappingBuffer mappingBuffer;
 }
 
-float evalTerrainNoise(float2 pos, TerrainNoiseSettings terrainSettings)
-{
-    // create continent shape
-    float continentShape = SimpleNoise(pos, terrainSettings.continentSettings);
-    // create mountains
-    float mountainShape = SmoothedRidgeNoise(pos, terrainSettings.mountainSettings);
-    // mountains shouldn't stick out of the oceans as much
-    float mountainMask = smoothstep(-terrainSettings.mountainBlend - terrainSettings.oceanFloorDepth, 0.0f, continentShape);
-    
-    // apply ocean floor
-    continentShape = smoothMax(continentShape, -terrainSettings.oceanFloorDepth, terrainSettings.oceanFloorSmoothing);
-    if (continentShape < 0)
-        continentShape *= 1 + terrainSettings.oceanDepthMultiplier;
-    
-    return continentShape + (mountainShape * mountainMask);
-}
-
 
 [numthreads(16, 16, 1)]
 void main(uint3 dispatchThreadID : SV_DispatchThreadID)
@@ -50,13 +32,15 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float2 pos = uv + offset;
     
     uint2 biomeMapUV = GetBiomeMapLocation(pos, mappingBuffer);
+    float2 noisePos = mappingBuffer.topLeft + pos;
     float2 biomeBlending = GetBiomeBlend(pos, mappingBuffer);
+   
     
     float terrainHeight = 0.0f;
     if (length(biomeBlending) == 0.0f)
     {
         int biome = asint(gBiomeMap.Load(uint3(biomeMapUV, 0)).r);
-        terrainHeight = evalTerrainNoise(pos, gGenerationSettingsBuffer[biome]);
+        terrainHeight = TerrainNoise(noisePos, gGenerationSettingsBuffer[biome]);
     }
     else
     {
@@ -65,10 +49,10 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         int b3 = asint(gBiomeMap.Load(uint3(biomeMapUV + uint2(0, sign(biomeBlending.y)), 0)).r);
         int b4 = asint(gBiomeMap.Load(uint3(biomeMapUV + uint2(sign(biomeBlending.x), sign(biomeBlending.y)), 0)).r);
         
-        float h1 = evalTerrainNoise(pos, gGenerationSettingsBuffer[b1]);
-        float h2 = b2 == b1 ? h1 : evalTerrainNoise(pos, gGenerationSettingsBuffer[b2]);
-        float h3 = b3 == b1 ? h1 : evalTerrainNoise(pos, gGenerationSettingsBuffer[b3]);
-        float h4 = b4 == b1 ? h1 : evalTerrainNoise(pos, gGenerationSettingsBuffer[b4]);
+        float h1 = TerrainNoise(noisePos, gGenerationSettingsBuffer[b1]);
+        float h2 = b2 == b1 ? h1 : TerrainNoise(noisePos, gGenerationSettingsBuffer[b2]);
+        float h3 = b3 == b1 ? h1 : TerrainNoise(noisePos, gGenerationSettingsBuffer[b3]);
+        float h4 = b4 == b1 ? h1 : TerrainNoise(noisePos, gGenerationSettingsBuffer[b4]);
         
         terrainHeight = lerp(
             lerp(h1, h3, abs(biomeBlending.y)),

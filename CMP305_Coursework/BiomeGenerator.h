@@ -51,6 +51,11 @@ public:
 		XMFLOAT3 slopeColour{ 0.35f, 0.23f, 0.04f };
 		XMFLOAT3 cliffColour{ 0.19f, 0.18f, 0.15f };
 
+		float flatThreshold = 0.69f;
+		float cliffThreshold = 0.89f;
+		float shoreHeight = 1.5f;
+		float steepnessSmoothing = 0.125f;
+
 		bool SettingsGUI();
 		nlohmann::json Serialize() const;
 		void LoadFromJson(const nlohmann::json& data);
@@ -101,7 +106,7 @@ private:
 	void SelectBiomes(int** biomeMapPtr, int* tempMap, size_t mapSize);
 
 	// zoom
-	void Zoom2x(int** biomeMapPtr, size_t* mapSize);
+	void Zoom2x(int** mapPtr, size_t* mapSize);
 
 	// utility
 	int CountNeighboursEqual(int x, int y, int v, int* biomeMap, size_t mapSize);
@@ -109,6 +114,7 @@ private:
 	void GetAllBiomesWithTemperature(std::vector<int>& out, BIOME_TEMP temperature);
 
 	void CreateBiomeMapTexture(ID3D11Device* device);
+	void CreateBiomeMappingBuffer(ID3D11Device* device);
 	void CreateGenerationSettingsBuffer(ID3D11Device* device);
 	void CreateBiomeTanBuffer(ID3D11Device* device);
 
@@ -118,7 +124,10 @@ private:
 	const char* StrFromBiomeTemp(BIOME_TEMP temp);
 
 private:
+	ID3D11Device* m_Device = nullptr;
+
 	std::mt19937 m_RNG;
+	unsigned int m_Seed;
 	std::uniform_int_distribution<int> m_Chance;
 
 	std::vector<Biome> m_AllBiomes;
@@ -127,18 +136,20 @@ private:
 	std::vector<int> m_WarmBiomes;
 	std::map<BIOME_TEMP, std::vector<int>*> m_BiomesByTemp;
 
-	// biome generation constants (all are integers [1,100] for how likely something is to occur)
+	// biome generation constants (all are integers [0,100] for how likely something is to occur)
 	int m_ContinentChance = 15;
 	int m_IslandExpandChance = 30;
 	int m_IslandErodeChance = 15;
 	int m_RemoveTooMuchOceanChance = 45;
+	int m_ZoomSamplePerturbation = 15;
+
+	int m_TemperateBiomeChance = 66;
+	int m_WarmBiomeChance = 17;
+	int m_ColdBiomeChance = 17;
 
 	int* m_BiomeMap = nullptr;
 	size_t m_BiomeMapSize = -1;
 	ID3D11ShaderResourceView* m_BiomeMapSRV = nullptr;
-
-	int* m_TemperatureMap = nullptr;
-	size_t m_TemperatureMapSize = -1;
 
 	TerrainNoiseSettings m_GenerationSettings[MAX_BIOMES];
 	ID3D11Buffer* m_GenerationSettingsBuffer = nullptr;
