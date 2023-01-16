@@ -94,18 +94,18 @@ float4 main(InputType input) : SV_TARGET
     // global up is always (0, 1, 0), so dot(normal, worldNormal) simplifies to normal.y
     float steepness = 1 - normal.y;
     
-    float transitionA = biomeTan.steepnessSmoothing * (1 - biomeTan.flatThreshold);
-    float transitionB = biomeTan.steepnessSmoothing * (1 - biomeTan.cliffThreshold);
+    float s1 = biomeTan.steepnessSmoothing * 0.5f;
+    float s2 = biomeTan.heightSmoothing * 0.5f;
     
     float steepnessStrength = 0.5f * (
-        smoothstep(biomeTan.flatThreshold - transitionA, biomeTan.flatThreshold + transitionA, steepness) +
-        smoothstep(biomeTan.cliffThreshold - transitionB, biomeTan.cliffThreshold + transitionB, steepness)
+        smoothstep(biomeTan.flatThreshold - s1, biomeTan.flatThreshold + s1, steepness) +
+        smoothstep(biomeTan.cliffThreshold - s1, biomeTan.cliffThreshold + s1, steepness)
     );
     
     // biome colouring
     float3 groundColour;
     
-    float shoreMix = 1 - smoothstep(0, biomeTan.shoreHeight, input.worldPosition.y);
+    float shoreMix = 1 - smoothstep(biomeTan.shoreHeight - s2, biomeTan.shoreHeight + s2, input.worldPosition.y);
     groundColour = lerp(biomeTan.flatColour, biomeTan.shoreColour, shoreMix);
     
     
@@ -114,6 +114,9 @@ float4 main(InputType input) : SV_TARGET
         groundColour = lerp(groundColour, biomeTan.slopeColour, remap01(steepnessStrength, 0.0f, 0.5f));
     else
         groundColour = lerp(biomeTan.slopeColour, biomeTan.cliffColour, remap01(steepnessStrength, 0.5f, 1.0f));
+    
+    float snowMix = smoothstep(biomeTan.snowHeight - s2, biomeTan.snowHeight + s2, input.worldPosition.y);
+    groundColour = lerp(groundColour, biomeTan.snowColour, snowMix);
     
     return lightColour * float4(groundColour, 1.0f);
 }

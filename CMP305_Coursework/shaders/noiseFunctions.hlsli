@@ -5,12 +5,10 @@
 
 struct SimpleNoiseSettings
 {
-    // 16 bytes
     float elevation;
     float frequency;
     float verticalShift;
     int octaves;
-    // 16 bytes
     float2 offset;
     float persistence;
     float lacunarity;
@@ -18,31 +16,46 @@ struct SimpleNoiseSettings
 
 struct RidgeNoiseSettings
 {
-    // 16 bytes
     float elevation;
     float frequency;
-    float verticalShift;
     int octaves;
-    // 16 bytes
-    float2 offset;
     float persistence;
     float lacunarity;
-    // 16 bytes
+    float2 offset;
     float power;
     float gain;
     float peakSmoothing;
-    float padding0;
+    float ridgeThreshold;
+    
+    float padding;
+};
+
+struct MountainNoiseSettings
+{
+    float elevation;
+    float frequency;
+    int octaves;
+    float persistence;
+    
+    float lacunarity;
+    float2 offset;
+    float blending;
+    
+    float detail;
+    
+    float3 padding;
 };
 
 struct TerrainNoiseSettings
 {
     SimpleNoiseSettings continentSettings;
-    RidgeNoiseSettings mountainSettings;
+    MountainNoiseSettings mountainSettings;
+    RidgeNoiseSettings ridgeSettings;
     
     float oceanDepthMultiplier;
     float oceanFloorDepth;
     float oceanFloorSmoothing;
-    float mountainBlend;
+    float padding;
 };
 
 
@@ -86,7 +99,7 @@ float RidgeNoise(float2 pos, RidgeNoiseSettings settings)
         a *= settings.persistence;
     }
     
-    return noiseSum * settings.elevation + settings.verticalShift;
+    return noiseSum * settings.elevation;
 }
 
 
@@ -107,7 +120,7 @@ float SmoothedRidgeNoise(float2 pos, RidgeNoiseSettings settings)
     return (sample0 + sample1 + sample2 + sample3 + sample4 + sample5 + sample6 + sample7 + sample8) / 9.0f;
 }
 
-float NewRidgeNoise(float2 pos, RidgeNoiseSettings settings)
+float MountainNoise(float2 pos, MountainNoiseSettings settings)
 {
     float noiseSum = 0.0f;
     float f = settings.frequency;
@@ -117,28 +130,39 @@ float NewRidgeNoise(float2 pos, RidgeNoiseSettings settings)
     for (int octave = 0; octave < settings.octaves; octave++)
     {
         float noiseVal1 = abs(snoise(f * pos + settings.offset));
-        float noiseVal2 = noiseVal1 * (1.0f - smoothstep(0, noiseVal1, settings.gain));
+        float noiseVal2 = noiseVal1 * (1.0f - smoothstep(0, noiseVal1, settings.blending));
         
         noiseSum += noiseVal2 * a;
         
         f *= settings.lacunarity;
-        a *= settings.persistence * (1.0f - smoothstep(0, noiseVal1, settings.peakSmoothing));
+        a *= settings.persistence * (1.0f - smoothstep(0, noiseVal1, settings.detail));
     }
     
-    return noiseSum * settings.elevation + settings.verticalShift;
+    return noiseSum * settings.elevation;
 }
 
 float TerrainNoise(float2 pos, TerrainNoiseSettings terrainSettings)
 {
     // create continent shape
     float continentShape = SimpleNoise(pos, terrainSettings.continentSettings);
-    // create mountains
-    float mountainShape = NewRidgeNoise(pos, terrainSettings.mountainSettings);
     
-    // apply ocean floor
+    // create mountains
+    float mountainShape = 0, ridgeShape = 0;
+    if (terrainSettings.mountainSettings.elevation > 0.0f)
+    {
+        mountainShape = MountainNoise(pos, terrainSettings.mountainSettings);
+    }
+    // create ridges
+    if (terrainSettings.ridgeSettings.elevation > 0.0f)
+    {
+        ridgeShape = RidgeNoise(pos, terrainSettings.ridgeSettings);
+        ridgeShape *= smoothstep(0, terrainSettings.ridgeSettings.ridgeThreshold, mountainShape);
+    }
+    
+    // create ocean floor
     continentShape = smoothMax(continentShape, -terrainSettings.oceanFloorDepth, terrainSettings.oceanFloorSmoothing);
     if (continentShape < 0)
         continentShape *= 1 + terrainSettings.oceanDepthMultiplier;
     
-    return continentShape + mountainShape;
+    return continentShape + mountainShape + ridgeShape;
 }

@@ -34,7 +34,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	m_TerrainMesh = new TerrainMesh(renderer->getDevice());
 	m_Cube = new CubeMesh(renderer->getDevice(), renderer->getDeviceContext(), 2);
-	m_OrthoMesh = new OrthoMesh(renderer->getDevice(), renderer->getDeviceContext(), 150, 150, (screenWidth / 2) - 75, (screenHeight / 2) - 75);
+	m_OrthoMesh = new OrthoMesh(renderer->getDevice(), renderer->getDeviceContext(), 200, 200, (screenWidth / 2) - 100, (screenHeight / 2) - 100);
 
 	camera->setPosition(-50.0f, 30.0f, -50.0f);
 	camera->setRotation(0.0f, 0.0f, 0.0f);
@@ -67,6 +67,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	if (m_LoadOnOpen)
 	{
 		loadSettings(std::string(m_SaveFilePath));
+		m_BiomeGenerator->GenerateBiomeMap(renderer->getDevice());
 		applyFilterStack();
 	}
 }
@@ -208,7 +209,7 @@ void App1::waterPass()
 	{
 
 		renderer->setZBuffer(false);
-		m_WaterShader->setShaderParameters(renderer->getDeviceContext(), viewMatrix, projectionMatrix, m_RenderTarget->GetColourSRV(), m_RenderTarget->GetDepthSRV(), light, camera, m_Time);
+		m_WaterShader->setShaderParameters(renderer->getDeviceContext(), viewMatrix, projectionMatrix, m_RenderTarget->GetColourSRV(), m_RenderTarget->GetDepthSRV(), light, camera, m_Time, m_BiomeGenerator);
 		m_WaterShader->Render(renderer->getDeviceContext());
 		renderer->setZBuffer(true);
 	}
@@ -284,10 +285,8 @@ void App1::gui()
 		if (ImGui::TreeNode("Ocean"))
 		{
 			m_WaterShader->SettingsGUI();
-
 			ImGui::TreePop();
 		}
-		ImGui::Separator();
 	}
 	ImGui::Separator();
 
@@ -310,22 +309,7 @@ void App1::gui()
 
 	if (ImGui::CollapsingHeader("Terrain"))
 	{
-		if (ImGui::TreeNode("Generation"))
-		{
-			if (m_BiomeGenerator)
-				regenerateTerrain |= m_BiomeGenerator->GenerationSettingsGUI();
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNode("Shading"))
-		{
-			if (m_BiomeGenerator)
-			{
-				if (m_BiomeGenerator->TanningSettingsGUI())
-					m_BiomeGenerator->UpdateBuffers(renderer->getDeviceContext()); // update tanning buffer
-			}
-
-			ImGui::TreePop();
-		}
+		regenerateTerrain |= m_BiomeGenerator->SettingsGUI();
 	}
 	ImGui::Separator();
 

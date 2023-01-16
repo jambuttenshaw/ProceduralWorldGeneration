@@ -4,6 +4,7 @@
 #include <DirectXMath.h>
 #include <random>
 #include <map>
+#include <functional>
 
 #include "NoiseSettings.h"
 
@@ -38,10 +39,7 @@ public:
 		// spawning properties
 		BIOME_TYPE type;
 		BIOME_TEMP temperature;
-		bool variant;
 		int spawnWeight;
-
-		// generation settings specific to this biome are stored in the Generation Settings buffer
 	};
 
 	struct BiomeTan
@@ -50,11 +48,16 @@ public:
 		XMFLOAT3 flatColour{ 0.3f, 0.5f, 0.05f };
 		XMFLOAT3 slopeColour{ 0.35f, 0.23f, 0.04f };
 		XMFLOAT3 cliffColour{ 0.19f, 0.18f, 0.15f };
+		XMFLOAT3 snowColour{ 1.0f, 1.0f, 1.0f };
+		XMFLOAT3 shallowWaterColour{ 0.38f, 1.0f, 0.87f };
+		XMFLOAT3 deepWaterColour{ 0.1f, 0.22f, 0.6f };
 
 		float flatThreshold = 0.69f;
 		float cliffThreshold = 0.89f;
 		float shoreHeight = 1.5f;
+		float snowHeight = 23.0f;
 		float steepnessSmoothing = 0.125f;
+		float heightSmoothing = 3.0f;
 
 		bool SettingsGUI();
 		nlohmann::json Serialize() const;
@@ -73,8 +76,7 @@ public:
 	BiomeGenerator(ID3D11Device* device, unsigned int seed);
 	~BiomeGenerator();
 
-	bool GenerationSettingsGUI();
-	bool TanningSettingsGUI();
+	bool SettingsGUI();
 	nlohmann::json Serialize() const;
 	void LoadFromJson(const nlohmann::json& data);
 
@@ -104,14 +106,15 @@ private:
 	void TransitionTemperatures(int** tempMapPtr, size_t mapSize);
 
 	void SelectBiomes(int** biomeMapPtr, int* tempMap, size_t mapSize);
+	void AddShores(int** biomeMapPtr, size_t mapSize);
 
 	// zoom
 	void Zoom2x(int** mapPtr, size_t* mapSize);
 
 	// utility
 	int CountNeighboursEqual(int x, int y, int v, int* biomeMap, size_t mapSize);
+	int CountNeighboursEqual(int x, int y, std::function<bool(int biome)> condition, int* biomeMap, size_t mapSize);
 	int GetBiomeIDByName(const char* name) const;
-	void GetAllBiomesWithTemperature(std::vector<int>& out, BIOME_TEMP temperature);
 
 	void CreateBiomeMapTexture(ID3D11Device* device);
 	void CreateBiomeMappingBuffer(ID3D11Device* device);
@@ -131,10 +134,8 @@ private:
 	std::uniform_int_distribution<int> m_Chance;
 
 	std::vector<Biome> m_AllBiomes;
-	std::vector<int> m_ColdBiomes;
-	std::vector<int> m_TemperateBiomes;
-	std::vector<int> m_WarmBiomes;
-	std::map<BIOME_TEMP, std::vector<int>*> m_BiomesByTemp;
+	std::map<BIOME_TEMP, std::vector<int>> m_SpawnableLandBiomesByTemp;
+	std::map<BIOME_TEMP, std::vector<int>> m_SpawnableOceanBiomesByTemp;
 
 	// biome generation constants (all are integers [0,100] for how likely something is to occur)
 	int m_ContinentChance = 15;

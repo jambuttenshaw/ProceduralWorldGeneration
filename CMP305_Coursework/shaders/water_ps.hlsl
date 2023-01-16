@@ -1,5 +1,6 @@
 // Water post processing effect
 
+#include "biomeHelper.hlsli"
 #include "math.hlsli"
 
 
@@ -10,14 +11,14 @@ Texture2D normalMapA : register(t2);
 Texture2D normalMapB : register(t3);
 SamplerState normalMapSampler : register(s0);
 
+Texture2D biomeMap : register(t4);
+StructuredBuffer<BiomeTan> biomeTans : register(t5);
+
+
 cbuffer WaterBuffer : register(b0)
 {
     // 64 bytes
     matrix projection;
-    // 16 bytes
-    float4 deepColour;
-    // 16 bytes
-    float4 shallowColour;
     // 16 bytes
     float3 cameraPos;
     float depthMultiplier;
@@ -41,6 +42,11 @@ cbuffer LightBuffer : register(b1)
     float4 specularColour;
     float3 lightDirection;
     float padding1;
+};
+
+cbuffer BiomeMappingBuffer : register(b2)
+{
+    BiomeMappingBuffer mappingBuffer;
 };
 
 struct InputType
@@ -92,8 +98,6 @@ float4 main(InputType input) : SV_TARGET
         float tDepth = 1 - exp(-depthMultiplier * depthThroughWater);
         float tAlpha = 1 - exp(-alphaMultiplier * depthThroughWater);
         
-        float4 waterColour = lerp(shallowColour, deepColour, tDepth);
-        
         // normal mapping
         
         // work out where on the ocean surface this fragment lies
@@ -124,6 +128,19 @@ float4 main(InputType input) : SV_TARGET
         float specularExponent = specularAngle / (1.0f - smoothness);
         float specularHighlight = exp(-specularExponent * specularExponent);
         float4 specular = saturate(specularHighlight * specularColour);
+        
+        // water colour
+        
+        // water colour depends on biome
+        // biome:
+        float2 pos = intersectionPoint.xz / 100.0f;
+        uint2 biomeMapUV = GetBiomeMapLocation(pos, mappingBuffer);
+        float2 biomeBlend = GetBiomeBlend(pos, mappingBuffer);
+    
+        // blend biome tans
+        BiomeTan biomeTan = BlendTans(biomeMap, biomeTans, biomeMapUV, biomeBlend);
+        
+        float4 waterColour = float4(lerp(biomeTan.shallowWaterColour, biomeTan.deepWaterColour, tDepth), 1.0f);
         
         waterColour *= lightColour;
         waterColour += specular;

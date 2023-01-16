@@ -2,6 +2,8 @@
 
 #include "SerializationHelper.h"
 
+#include "BiomeGenerator.h"
+
 
 WaterShader::WaterShader(ID3D11Device* device, ID3D11ShaderResourceView* normalMapA, ID3D11ShaderResourceView* normalMapB)
 	: BaseFullScreenShader(device),
@@ -71,7 +73,7 @@ void WaterShader::UnbindShaderResources(ID3D11DeviceContext* deviceContext)
 	deviceContext->PSSetSamplers(0, 1, &nullSampler);
 }
 
-void WaterShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& viewMatrix, const XMMATRIX& projectionMatrix, ID3D11ShaderResourceView* renderTextureColour, ID3D11ShaderResourceView* renderTextureDepth, Light* light, Camera* camera, float time)
+void WaterShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& viewMatrix, const XMMATRIX& projectionMatrix, ID3D11ShaderResourceView* renderTextureColour, ID3D11ShaderResourceView* renderTextureDepth, Light* light, Camera* camera, float time, const BiomeGenerator* biomeGenerator)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -94,9 +96,6 @@ void WaterShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const 
 	dataPtr->projection = tproj;
 	dataPtr->cameraPos = camera->getPosition();
 
-	dataPtr->deepColour = m_DeepColour;
-	dataPtr->shallowColour = m_ShallowColour;
-
 	dataPtr->oceanBoundsMin = m_OceanBoundsMin;
 	dataPtr->oceanBoundsMax = m_OceanBoundsMax;
 
@@ -111,7 +110,6 @@ void WaterShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const 
 	dataPtr->padding = 0.0f;
 	
 	deviceContext->Unmap(m_WaterBuffer, 0);
-	deviceContext->PSSetConstantBuffers(0, 1, &m_WaterBuffer);
 
 	//Additional
 	// Send light data to pixel shader
@@ -124,11 +122,18 @@ void WaterShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const 
 	lightPtr->direction = light->getDirection();
 	lightPtr->padding = 0.0f;
 	deviceContext->Unmap(m_LightBuffer, 0);
-	deviceContext->PSSetConstantBuffers(1, 1, &m_LightBuffer);
 
-	// Set shader texture resource in the pixel shader.
-	ID3D11ShaderResourceView* srvs[] = { renderTextureColour, renderTextureDepth, m_NormalMapA, m_NormalMapB };
-	deviceContext->PSSetShaderResources(0, 4, srvs);
+	ID3D11Buffer* cbs[] = { m_WaterBuffer, m_LightBuffer, biomeGenerator->GetBiomeMappingBuffer() };
+	deviceContext->PSSetConstantBuffers(0, 3, cbs);
+
+	ID3D11ShaderResourceView* srvs[] = {
+		renderTextureColour, renderTextureDepth,
+		m_NormalMapA, m_NormalMapB,
+		biomeGenerator->GetBiomeMapSRV(),
+		biomeGenerator->GetBiomeTanningSRV()
+	};
+	deviceContext->PSSetShaderResources(0, 6, srvs);
+
 	deviceContext->PSSetSamplers(0, 1, &m_NormalMapSamplerState);
 }
 
@@ -136,8 +141,6 @@ void WaterShader::SettingsGUI()
 {
 	ImGui::DragFloat3("Ocean Bounds Min", &m_OceanBoundsMin.x, 0.1f);
 	ImGui::DragFloat3("Ocean Bounds Max", &m_OceanBoundsMax.x, 0.1f);
-	ImGui::ColorEdit3("Deep Colour", &m_DeepColour.x);
-	ImGui::ColorEdit3("Shallow Colour", &m_ShallowColour.x);
 	ImGui::SliderFloat("Depth Multiplier", &m_DepthMultiplier, 0.05f, 1.0f);
 	ImGui::SliderFloat("Alpha Multiplier", &m_AlphaMultiplier, 0.05f, 1.0f);
 	ImGui::SliderFloat("Normal Map Strength", &m_NormalMapStrength, 0.0f, 1.0f);
@@ -151,9 +154,6 @@ nlohmann::json WaterShader::Serialize() const
 
 	serialized["oceanBoundsMin"] = SerializationHelper::SerializeFloat3(m_OceanBoundsMin);
 	serialized["oceanBoundsMax"] = SerializationHelper::SerializeFloat3(m_OceanBoundsMax);
-
-	serialized["shallowColour"] = SerializationHelper::SerializeFloat4(m_ShallowColour);
-	serialized["deepColour"] = SerializationHelper::SerializeFloat4(m_DeepColour);
 
 	serialized["depthMultiplier"] = m_DepthMultiplier;
 	serialized["alphaMultiplier"] = m_AlphaMultiplier;
@@ -169,9 +169,6 @@ void WaterShader::LoadFromJson(const nlohmann::json& data)
 {
 	if (data.contains("oceanBoundsMin")) SerializationHelper::LoadFloat3FromJson(&m_OceanBoundsMin, data["oceanBoundsMin"]);
 	if (data.contains("oceanBoundsMax")) SerializationHelper::LoadFloat3FromJson(&m_OceanBoundsMax, data["oceanBoundsMax"]);
-
-	if (data.contains("shallowColour")) SerializationHelper::LoadFloat4FromJson(&m_ShallowColour, data["shallowColour"]);
-	if (data.contains("deepColour")) SerializationHelper::LoadFloat4FromJson(&m_DeepColour, data["deepColour"]);
 
 	if (data.contains("depthMultiplier")) m_DepthMultiplier = data["depthMultiplier"];
 	if (data.contains("alphaMultiplier")) m_AlphaMultiplier = data["alphaMultiplier"];

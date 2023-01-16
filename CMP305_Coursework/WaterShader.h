@@ -7,6 +7,9 @@
 
 using namespace DirectX;
 
+class BiomeGenerator;
+
+
 class WaterShader : public BaseFullScreenShader
 {
 private:
@@ -19,8 +22,6 @@ private:
 	struct WaterBufferType
 	{
 		XMMATRIX projection;
-		XMFLOAT4 deepColour;
-		XMFLOAT4 shallowColour;
 		XMFLOAT3 cameraPos;
 		float depthMultiplier;
 		XMFLOAT3 oceanBoundsMin;
@@ -46,7 +47,7 @@ public:
 	WaterShader(ID3D11Device* device, ID3D11ShaderResourceView* normalMapA, ID3D11ShaderResourceView* normalMapB);
 	~WaterShader();
 
-	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& view, const XMMATRIX& projection, ID3D11ShaderResourceView* renderTextureColour, ID3D11ShaderResourceView* renderTextureDepth, Light* light, Camera* camera, float time);
+	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& view, const XMMATRIX& projection, ID3D11ShaderResourceView* renderTextureColour, ID3D11ShaderResourceView* renderTextureDepth, Light* light, Camera* camera, float time, const BiomeGenerator* biomeGenerator);
 
 	void SettingsGUI();
 
@@ -66,9 +67,6 @@ private:
 
 	XMFLOAT3 m_OceanBoundsMin = { -50.0f, -10.0f, -50.0f };
 	XMFLOAT3 m_OceanBoundsMax = { 50.0f, 0.0f, 50.0f };
-
-	XMFLOAT4 m_ShallowColour = { 0.38f, 1.0f, 0.87f, 1.0f };
-	XMFLOAT4 m_DeepColour = { 0.10f, 0.22f, 0.6f, 1.0f };
 
 	float m_DepthMultiplier = 0.2f;
 	float m_AlphaMultiplier = 0.2f;
