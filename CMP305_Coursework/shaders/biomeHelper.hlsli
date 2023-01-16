@@ -1,4 +1,6 @@
 
+#define MAX_BIOMES 32
+
 struct BiomeMappingBuffer
 {
     float2 topLeft;
@@ -23,6 +25,8 @@ struct BiomeTan
     float cliffThreshold;
     float shoreHeight;
     float snowHeight;
+    float snowSteepness;
+    float snowSmoothing;
     float steepnessSmoothing;
     float heightSmoothing;
 };
@@ -74,6 +78,8 @@ BiomeTan BlendTans(BiomeTan a, BiomeTan b, float t)
     blended.cliffThreshold = lerp(a.cliffThreshold, b.cliffThreshold, t);
     blended.shoreHeight = lerp(a.shoreHeight, b.shoreHeight, t);
     blended.snowHeight = lerp(a.snowHeight, b.snowHeight, t);
+    blended.snowSteepness = lerp(a.snowSteepness, b.snowSteepness, t);
+    blended.snowSmoothing = lerp(a.snowSmoothing, b.snowSmoothing, t);
     blended.steepnessSmoothing = lerp(a.steepnessSmoothing, b.steepnessSmoothing, t);
     blended.heightSmoothing = lerp(a.heightSmoothing, b.heightSmoothing, t);
     

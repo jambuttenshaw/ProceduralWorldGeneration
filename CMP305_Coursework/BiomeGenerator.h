@@ -10,7 +10,7 @@
 
 using namespace DirectX;
 
-#define MAX_BIOMES 16
+#define MAX_BIOMES 32
 
 
 
@@ -55,7 +55,11 @@ public:
 		float flatThreshold = 0.69f;
 		float cliffThreshold = 0.89f;
 		float shoreHeight = 1.5f;
+		
 		float snowHeight = 23.0f;
+		float snowSteepness = 0.7f;
+		float snowSmoothing = 0.1f;
+
 		float steepnessSmoothing = 0.125f;
 		float heightSmoothing = 3.0f;
 
@@ -94,6 +98,8 @@ public:
 	inline const XMFLOAT4* GetBiomeMinimapColours() const { return m_BiomeMinimapColours; }
 
 	void UpdateBuffers(ID3D11DeviceContext* deviceContext);
+
+	inline bool ShowBiomeMap() const { return m_ShowBiomeMap; }
 
 private:
 	// land/ocean balance
@@ -166,4 +172,7 @@ private:
 	float m_BiomeBlending = 0.5f;
 
 	XMFLOAT4 m_BiomeMinimapColours[MAX_BIOMES];
+
+	// gui
+	bool m_ShowBiomeMap = true;
 };

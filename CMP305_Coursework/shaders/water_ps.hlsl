@@ -116,6 +116,8 @@ float4 main(InputType input) : SV_TARGET
         float3 bumpedNormal = normalMapToWorldSpace(normalMapASample, normalW, float3(1, 0, 0));
         bumpedNormal = 0.5f * (bumpedNormal + normalMapToWorldSpace(normalMapBSample, normalW, float3(1, 0, 0)));
         
+        float3 n = lerp(normalW, bumpedNormal, normalMapStrength);
+        
         // lighting
         float3 toLight = -normalize(lightDirection);
         
@@ -124,7 +126,7 @@ float4 main(InputType input) : SV_TARGET
         
         // guassian model of specular recflection
         float3 h = normalize(toLight - normalize(input.viewVector));
-        float specularAngle = acos(saturate(dot(h, bumpedNormal)));
+        float specularAngle = acos(saturate(dot(h, n)));
         float specularExponent = specularAngle / (1.0f - smoothness);
         float specularHighlight = exp(-specularExponent * specularExponent);
         float4 specular = saturate(specularHighlight * specularColour);

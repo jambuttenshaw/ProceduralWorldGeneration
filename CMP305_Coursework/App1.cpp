@@ -137,8 +137,7 @@ bool App1::render()
 	}
 
 	renderer->setZBuffer(false);
-	// Debug: biome map on the screen
-	if (true)
+	if (m_BiomeGenerator->ShowBiomeMap())
 	{
 		m_OrthoMesh->sendData(renderer->getDeviceContext());
 
@@ -221,14 +220,6 @@ void App1::gui()
 
 	if (ImGui::CollapsingHeader("General"))
 	{
-		static bool showDemo = false;
-		ImGui::Checkbox("Show demo", &showDemo);
-		if (showDemo)
-		{
-			ImGui::ShowDemoWindow();
-			return;
-		}
-
 		ImGui::Text("FPS: %.2f", timer->getFPS());
 		ImGui::Checkbox("Wireframe mode", &wireframeToggle);
 		ImGui::Separator();
@@ -280,13 +271,9 @@ void App1::gui()
 	}
 	ImGui::Separator();
 
-	if (ImGui::CollapsingHeader("Graphics"))
+	if (ImGui::CollapsingHeader("Ocean"))
 	{
-		if (ImGui::TreeNode("Ocean"))
-		{
-			m_WaterShader->SettingsGUI();
-			ImGui::TreePop();
-		}
+		m_WaterShader->SettingsGUI();
 	}
 	ImGui::Separator();
 

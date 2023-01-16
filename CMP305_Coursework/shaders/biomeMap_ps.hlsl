@@ -3,8 +3,6 @@
 Texture2D gBiomeMap : register(t0);
 SamplerState gSampler : register(s0);
 
-#define MAX_BIOMES 16
-
 cbuffer BiomeColourBuffer : register(b0)
 {
     float4 biomeColours[MAX_BIOMES];

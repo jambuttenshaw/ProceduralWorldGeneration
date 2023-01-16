@@ -29,7 +29,11 @@ bool BiomeGenerator::BiomeTan::SettingsGUI()
 	changed |= ImGui::SliderFloat("Flat threshold", &flatThreshold, 0, cliffThreshold);
 	changed |= ImGui::SliderFloat("Cliff threshold", &cliffThreshold, flatThreshold, 1);
 	changed |= ImGui::DragFloat("Shore Height", &shoreHeight, 0.005f);
+	ImGui::Text("Snow");
 	changed |= ImGui::DragFloat("Snow Height", &snowHeight, 0.005f);
+	changed |= ImGui::SliderFloat("Snow Steepness", &snowSteepness, 0.0f, 1.0f);
+	changed |= ImGui::SliderFloat("Snow Smoothing", &snowSmoothing, 0.0f, 1.0f);
+	ImGui::Text("Smoothing");
 	changed |= ImGui::SliderFloat("Steepness Smoothing", &steepnessSmoothing, 0.0f, 0.5f);
 	changed |= ImGui::DragFloat("Height Smoothing", &heightSmoothing, 0.01f);
 
@@ -52,6 +56,8 @@ nlohmann::json BiomeGenerator::BiomeTan::Serialize() const
 	serialized["cliffThreshold"] = cliffThreshold;
 	serialized["shoreHeight"] = shoreHeight;
 	serialized["snowHeight"] = snowHeight;
+	serialized["snowSteepness"] = snowSteepness;
+	serialized["snowSmoothing"] = snowSmoothing;
 	serialized["steepnessSmoothing"] = steepnessSmoothing;
 	serialized["heightSmoothing"] = heightSmoothing;
 
@@ -72,6 +78,8 @@ void BiomeGenerator::BiomeTan::LoadFromJson(const nlohmann::json& data)
 	if (data.contains("cliffThreshold")) cliffThreshold = data["cliffThreshold"];
 	if (data.contains("shoreHeight")) shoreHeight = data["shoreHeight"];
 	if (data.contains("snowHeight")) snowHeight = data["snowHeight"];
+	if (data.contains("snowSteepness")) snowSteepness = data["snowSteepness"];
+	if (data.contains("snowSmoothing")) snowSmoothing = data["snowSmoothing"];
 	if (data.contains("steepnessSmoothing")) steepnessSmoothing = data["steepnessSmoothing"];
 	if (data.contains("heightSmoothing")) heightSmoothing = data["heightSmoothing"];
 }
@@ -153,6 +161,8 @@ bool BiomeGenerator::SettingsGUI()
 		changed |= ImGui::DragFloat("Scale", &m_BiomeMapScale, 0.01f);
 		changed |= ImGui::SliderFloat("Blending", &m_BiomeBlending, 0.0f, 1.0f);
 	
+		ImGui::Checkbox("Show Biome Map", &m_ShowBiomeMap);
+
 		ImGui::Separator();
 		ImGui::TreePop();
 	}
