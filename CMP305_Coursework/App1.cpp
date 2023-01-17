@@ -15,7 +15,7 @@ App1::App1()
 	m_TerrainMesh = nullptr;
 	m_TerrainShader = nullptr;
 
-	strcpy_s(m_SaveFilePath, "res/settings/earth.json");
+	strcpy_s(m_SaveFilePath, "res/settings/alien.json");
 }
 
 void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, Input *in, bool VSYNC, bool FULL_SCREEN)
@@ -132,6 +132,7 @@ bool App1::render()
 
 	// Generate the view matrix based on the camera's position.
 	camera->update();
+	m_BiomeGenerator->UpdateBuffers(renderer->getDeviceContext());
 
 
 	// render world to render texture
@@ -253,7 +254,7 @@ void App1::gui()
 		if (ImGui::TreeNode("Camera"))
 		{
 			XMFLOAT3 camPos = camera->getPosition();
-			if (ImGui::DragFloat3("Camera Pos", &camPos.x, 0.1f))
+			if (ImGui::DragFloat3("Camera Pos", &camPos.x, 1.0f))
 				camera->setPosition(camPos.x, camPos.y, camPos.z);
 			XMFLOAT3 camRot = camera->getRotation();
 			if (ImGui::DragFloat3("Camera Rot", &camRot.x, 0.5f))
@@ -294,6 +295,47 @@ void App1::gui()
 
 		ImGui::Checkbox("Load On Open", &m_LoadOnOpen);
 		ImGui::Checkbox("Save On Exit", &m_SaveOnExit);
+
+		ImGui::Separator();
+		ImGui::Text("Load Examples:");
+
+		if (ImGui::Button("Earth"))
+		{
+			strcpy_s(m_SaveFilePath, "res/settings/earth.json");
+			loadSettings(std::string(m_SaveFilePath));
+			regenerateTerrain = true;
+		}
+		if (ImGui::Button("Pangaea"))
+		{
+			strcpy_s(m_SaveFilePath, "res/settings/pangaea.json");
+			loadSettings(std::string(m_SaveFilePath));
+			regenerateTerrain = true;
+		}
+		if (ImGui::Button("Archipelago"))
+		{
+			strcpy_s(m_SaveFilePath, "res/settings/archipelago.json");
+			loadSettings(std::string(m_SaveFilePath));
+			regenerateTerrain = true;
+		}
+		if (ImGui::Button("Icy Lands"))
+		{
+			strcpy_s(m_SaveFilePath, "res/settings/icy lands.json");
+			loadSettings(std::string(m_SaveFilePath));
+			regenerateTerrain = true;
+		}
+		if (ImGui::Button("Wild West"))
+		{
+			strcpy_s(m_SaveFilePath, "res/settings/wild west.json");
+			loadSettings(std::string(m_SaveFilePath));
+			regenerateTerrain = true;
+		}
+		if (ImGui::Button("Alien"))
+		{
+			strcpy_s(m_SaveFilePath, "res/settings/alien.json");
+			loadSettings(std::string(m_SaveFilePath));
+			regenerateTerrain = true;
+		}
+		if (regenerateTerrain) m_BiomeGenerator->GenerateBiomeMap(renderer->getDevice());
 	}
 	ImGui::Separator();
 

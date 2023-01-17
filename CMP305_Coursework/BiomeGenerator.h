@@ -56,13 +56,11 @@ public:
 		float flatThreshold = 0.69f;
 		float cliffThreshold = 0.89f;
 		float shoreHeight = 1.5f;
+		float detailThreshold = 0.0f;
 		
 		float snowHeight = 23.0f;
 		float snowSteepness = 0.7f;
 		float snowSmoothing = 0.1f;
-
-		float detailThreshold = 0.0f;
-		float detailScale = 4.0f;
 
 		float steepnessSmoothing = 0.125f;
 		float heightSmoothing = 3.0f;

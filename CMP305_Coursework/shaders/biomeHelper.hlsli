@@ -24,13 +24,11 @@ struct BiomeTan
     float flatThreshold;
     float cliffThreshold;
     float shoreHeight;
+    float detailThreshold;
     
     float snowHeight;
     float snowSteepness;
     float snowSmoothing;
-    
-    float detailThreshold;
-    float detailScale;
     
     float steepnessSmoothing;
     float heightSmoothing;
@@ -90,7 +88,6 @@ BiomeTan BlendTans(BiomeTan a, BiomeTan b, float t)
     blended.snowSmoothing = lerp(a.snowSmoothing, b.snowSmoothing, t);
     
     blended.detailThreshold = lerp(a.detailThreshold, b.detailThreshold, t);
-    blended.detailScale = lerp(a.detailScale, b.detailScale, t);
     
     blended.steepnessSmoothing = lerp(a.steepnessSmoothing, b.steepnessSmoothing, t);
     blended.heightSmoothing = lerp(a.heightSmoothing, b.heightSmoothing, t);

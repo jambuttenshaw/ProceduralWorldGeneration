@@ -33,14 +33,11 @@ bool BiomeGenerator::BiomeTan::SettingsGUI()
 	changed |= ImGui::SliderFloat("Flat threshold", &flatThreshold, 0.0f, cliffThreshold);
 	changed |= ImGui::SliderFloat("Cliff threshold", &cliffThreshold, flatThreshold, 1.0f);
 	changed |= ImGui::DragFloat("Shore Height", &shoreHeight, 0.005f);
+	changed |= ImGui::SliderFloat("Threshold", &detailThreshold, 0.0f, 1.0f);
 	ImGui::Text("Snow");
 	changed |= ImGui::DragFloat("Snow Height", &snowHeight, 0.005f);
 	changed |= ImGui::SliderFloat("Snow Steepness", &snowSteepness, 0.0f, 1.0f);
 	changed |= ImGui::SliderFloat("Snow Smoothing", &snowSmoothing, 0.0f, 1.0f);
-
-	ImGui::Text("Detail");
-	changed |= ImGui::SliderFloat("Threshold", &detailThreshold, 0.0f, 1.0f);
-	changed |= ImGui::DragFloat("Scale", &detailScale, 0.005f);
 
 	ImGui::Text("Smoothing");
 	changed |= ImGui::SliderFloat("Steepness Smoothing", &steepnessSmoothing, 0.0f, 0.5f);
@@ -65,11 +62,10 @@ nlohmann::json BiomeGenerator::BiomeTan::Serialize() const
 	serialized["flatThreshold"] = flatThreshold;
 	serialized["cliffThreshold"] = cliffThreshold;
 	serialized["shoreHeight"] = shoreHeight;
+	serialized["detailThreshold"] = detailThreshold;
 	serialized["snowHeight"] = snowHeight;
 	serialized["snowSteepness"] = snowSteepness;
 	serialized["snowSmoothing"] = snowSmoothing;
-	serialized["detailThreshold"] = detailThreshold;
-	serialized["detailScale"] = detailScale;
 	serialized["steepnessSmoothing"] = steepnessSmoothing;
 	serialized["heightSmoothing"] = heightSmoothing;
 
@@ -90,11 +86,10 @@ void BiomeGenerator::BiomeTan::LoadFromJson(const nlohmann::json& data)
 	if (data.contains("flatThreshold")) flatThreshold = data["flatThreshold"];
 	if (data.contains("cliffThreshold")) cliffThreshold = data["cliffThreshold"];
 	if (data.contains("shoreHeight")) shoreHeight = data["shoreHeight"];
+	if (data.contains("detailThreshold")) detailThreshold = data["detailThreshold"];
 	if (data.contains("snowHeight")) snowHeight = data["snowHeight"];
 	if (data.contains("snowSteepness")) snowSteepness = data["snowSteepness"];
 	if (data.contains("snowSmoothing")) snowSmoothing = data["snowSmoothing"];
-	if (data.contains("detailThreshold")) detailThreshold = data["detailThreshold"];
-	if (data.contains("detailScale")) detailScale = data["detailScale"];
 	if (data.contains("steepnessSmoothing")) steepnessSmoothing = data["steepnessSmoothing"];
 	if (data.contains("heightSmoothing")) heightSmoothing = data["heightSmoothing"];
 }
@@ -234,7 +229,7 @@ bool BiomeGenerator::SettingsGUI()
 		}
 		if (ImGui::TreeNode("Tanning"))
 		{
-			changed |= m_BiomeTans[selectedBiome].SettingsGUI();
+			m_BiomeTans[selectedBiome].SettingsGUI();
 			ImGui::TreePop();
 		}
 
