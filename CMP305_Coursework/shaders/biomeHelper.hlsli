@@ -14,6 +14,7 @@ struct BiomeTan
 {
     float3 shoreColour;
     float3 flatColour;
+    float3 flatDetailColour;
     float3 slopeColour;
     float3 cliffColour;
     float3 snowColour;
@@ -24,9 +25,14 @@ struct BiomeTan
     float flatThreshold;
     float cliffThreshold;
     float shoreHeight;
+    
     float snowHeight;
     float snowSteepness;
     float snowSmoothing;
+    
+    float detailThreshold;
+    float detailScale;
+    
     float steepnessSmoothing;
     float heightSmoothing;
 };
@@ -68,18 +74,25 @@ BiomeTan BlendTans(BiomeTan a, BiomeTan b, float t)
     BiomeTan blended;
     blended.shoreColour = lerp(a.shoreColour, b.shoreColour, t);
     blended.flatColour  = lerp(a.flatColour,  b.flatColour,  t);
+    blended.flatDetailColour = lerp(a.flatDetailColour, b.flatDetailColour, t);
     blended.slopeColour = lerp(a.slopeColour, b.slopeColour, t);
     blended.cliffColour = lerp(a.cliffColour, b.cliffColour, t);
     blended.snowColour = lerp(a.snowColour, b.snowColour, t);
+    
     blended.shallowWaterColour = lerp(a.shallowWaterColour, b.shallowWaterColour, t);
     blended.deepWaterColour = lerp(a.deepWaterColour, b.deepWaterColour, t);
     
     blended.flatThreshold = lerp(a.flatThreshold, b.flatThreshold, t);
     blended.cliffThreshold = lerp(a.cliffThreshold, b.cliffThreshold, t);
     blended.shoreHeight = lerp(a.shoreHeight, b.shoreHeight, t);
+    
     blended.snowHeight = lerp(a.snowHeight, b.snowHeight, t);
     blended.snowSteepness = lerp(a.snowSteepness, b.snowSteepness, t);
     blended.snowSmoothing = lerp(a.snowSmoothing, b.snowSmoothing, t);
+    
+    blended.detailThreshold = lerp(a.detailThreshold, b.detailThreshold, t);
+    blended.detailScale = lerp(a.detailScale, b.detailScale, t);
+    
     blended.steepnessSmoothing = lerp(a.steepnessSmoothing, b.steepnessSmoothing, t);
     blended.heightSmoothing = lerp(a.heightSmoothing, b.heightSmoothing, t);
     

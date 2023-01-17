@@ -46,6 +46,7 @@ public:
 	{
 		XMFLOAT3 shoreColour{ 0.89f, 0.8f, 0.42f };
 		XMFLOAT3 flatColour{ 0.3f, 0.5f, 0.05f };
+		XMFLOAT3 flatDetailColour{ 0.3f, 0.5f, 0.05f };
 		XMFLOAT3 slopeColour{ 0.35f, 0.23f, 0.04f };
 		XMFLOAT3 cliffColour{ 0.19f, 0.18f, 0.15f };
 		XMFLOAT3 snowColour{ 1.0f, 1.0f, 1.0f };
@@ -59,6 +60,9 @@ public:
 		float snowHeight = 23.0f;
 		float snowSteepness = 0.7f;
 		float snowSmoothing = 0.1f;
+
+		float detailThreshold = 0.0f;
+		float detailScale = 4.0f;
 
 		float steepnessSmoothing = 0.125f;
 		float heightSmoothing = 3.0f;

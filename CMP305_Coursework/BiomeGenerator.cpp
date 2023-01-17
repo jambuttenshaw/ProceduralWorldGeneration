@@ -6,12 +6,15 @@
 #include "imGUI/imgui.h"
 #include "SerializationHelper.h"
 
+
+
+
+
 static bool BiomeNameItemGetter(void* data, int idx, const char** out_str)
 {
 	*out_str = ((BiomeGenerator::Biome*)data + idx)->name;
 	return true;
 }
-
 
 bool BiomeGenerator::BiomeTan::SettingsGUI()
 {
@@ -19,6 +22,7 @@ bool BiomeGenerator::BiomeTan::SettingsGUI()
 
 	changed |= ImGui::ColorEdit3("Shore", &shoreColour.x);
 	changed |= ImGui::ColorEdit3("Flat", &flatColour.x);
+	changed |= ImGui::ColorEdit3("Flat Detail", &flatDetailColour.x);
 	changed |= ImGui::ColorEdit3("Slope", &slopeColour.x);
 	changed |= ImGui::ColorEdit3("Cliff", &cliffColour.x);
 	changed |= ImGui::ColorEdit3("Snow", &snowColour.x);
@@ -26,13 +30,18 @@ bool BiomeGenerator::BiomeTan::SettingsGUI()
 	changed |= ImGui::ColorEdit3("Shallow Water", &shallowWaterColour.x);
 	changed |= ImGui::ColorEdit3("Deep Water", &deepWaterColour.x);
 
-	changed |= ImGui::SliderFloat("Flat threshold", &flatThreshold, 0, cliffThreshold);
-	changed |= ImGui::SliderFloat("Cliff threshold", &cliffThreshold, flatThreshold, 1);
+	changed |= ImGui::SliderFloat("Flat threshold", &flatThreshold, 0.0f, cliffThreshold);
+	changed |= ImGui::SliderFloat("Cliff threshold", &cliffThreshold, flatThreshold, 1.0f);
 	changed |= ImGui::DragFloat("Shore Height", &shoreHeight, 0.005f);
 	ImGui::Text("Snow");
 	changed |= ImGui::DragFloat("Snow Height", &snowHeight, 0.005f);
 	changed |= ImGui::SliderFloat("Snow Steepness", &snowSteepness, 0.0f, 1.0f);
 	changed |= ImGui::SliderFloat("Snow Smoothing", &snowSmoothing, 0.0f, 1.0f);
+
+	ImGui::Text("Detail");
+	changed |= ImGui::SliderFloat("Threshold", &detailThreshold, 0.0f, 1.0f);
+	changed |= ImGui::DragFloat("Scale", &detailScale, 0.005f);
+
 	ImGui::Text("Smoothing");
 	changed |= ImGui::SliderFloat("Steepness Smoothing", &steepnessSmoothing, 0.0f, 0.5f);
 	changed |= ImGui::DragFloat("Height Smoothing", &heightSmoothing, 0.01f);
@@ -46,6 +55,7 @@ nlohmann::json BiomeGenerator::BiomeTan::Serialize() const
 
 	serialized["shore"] = SerializationHelper::SerializeFloat3(shoreColour);
 	serialized["flat"] = SerializationHelper::SerializeFloat3(flatColour);
+	serialized["flatDetail"] = SerializationHelper::SerializeFloat3(flatDetailColour);
 	serialized["slope"] = SerializationHelper::SerializeFloat3(slopeColour);
 	serialized["cliff"] = SerializationHelper::SerializeFloat3(cliffColour);
 	serialized["snow"] = SerializationHelper::SerializeFloat3(snowColour);
@@ -58,6 +68,8 @@ nlohmann::json BiomeGenerator::BiomeTan::Serialize() const
 	serialized["snowHeight"] = snowHeight;
 	serialized["snowSteepness"] = snowSteepness;
 	serialized["snowSmoothing"] = snowSmoothing;
+	serialized["detailThreshold"] = detailThreshold;
+	serialized["detailScale"] = detailScale;
 	serialized["steepnessSmoothing"] = steepnessSmoothing;
 	serialized["heightSmoothing"] = heightSmoothing;
 
@@ -68,6 +80,7 @@ void BiomeGenerator::BiomeTan::LoadFromJson(const nlohmann::json& data)
 {
 	if (data.contains("shore")) SerializationHelper::LoadFloat3FromJson(&shoreColour, data["shore"]);
 	if (data.contains("flat")) SerializationHelper::LoadFloat3FromJson(&flatColour, data["flat"]);
+	if (data.contains("flatDetail")) SerializationHelper::LoadFloat3FromJson(&flatDetailColour, data["flatDetail"]);
 	if (data.contains("slope")) SerializationHelper::LoadFloat3FromJson(&slopeColour, data["slope"]);
 	if (data.contains("cliff")) SerializationHelper::LoadFloat3FromJson(&cliffColour, data["cliff"]);
 	if (data.contains("snow")) SerializationHelper::LoadFloat3FromJson(&snowColour, data["snow"]);
@@ -80,6 +93,8 @@ void BiomeGenerator::BiomeTan::LoadFromJson(const nlohmann::json& data)
 	if (data.contains("snowHeight")) snowHeight = data["snowHeight"];
 	if (data.contains("snowSteepness")) snowSteepness = data["snowSteepness"];
 	if (data.contains("snowSmoothing")) snowSmoothing = data["snowSmoothing"];
+	if (data.contains("detailThreshold")) detailThreshold = data["detailThreshold"];
+	if (data.contains("detailScale")) detailScale = data["detailScale"];
 	if (data.contains("steepnessSmoothing")) steepnessSmoothing = data["steepnessSmoothing"];
 	if (data.contains("heightSmoothing")) heightSmoothing = data["heightSmoothing"];
 }
@@ -208,7 +223,8 @@ bool BiomeGenerator::SettingsGUI()
 		ImGui::Text("%s Biome Properties:", biome.name);
 		ImGui::Text("Type: %s", StrFromBiomeType(biome.type));
 		ImGui::Text("Temperature: %s", StrFromBiomeTemp(biome.temperature));
-		ImGui::Text("Spawn weight: %d", biome.spawnWeight);
+
+		ImGui::InputInt("Spawn Weight", &biome.spawnWeight);
 		ImGui::ColorEdit3("Biome Map Colour", (float*)(m_BiomeMinimapColours + selectedBiome));
 
 		ImGui::Separator();
@@ -260,6 +276,10 @@ nlohmann::json BiomeGenerator::Serialize() const
 	for (int i = 0; i < m_AllBiomes.size(); i++)
 		serialized["biomeTans"].push_back(m_BiomeTans[i].Serialize());
 
+	serialized["spawnWeights"] = nlohmann::json::object();
+	for (auto& biome : m_AllBiomes)
+		serialized["spawnWeights"][biome.name] = biome.spawnWeight;
+
 	return serialized;
 }
 
@@ -307,6 +327,16 @@ void BiomeGenerator::LoadFromJson(const nlohmann::json& data)
 		{
 			m_BiomeTans[index].LoadFromJson(biome);
 			index++;
+		}
+	}
+
+	if (data.contains("spawnWeights"))
+	{
+		auto& spawnWeights = data["spawnWeights"];
+		for (auto& biome : m_AllBiomes)
+		{
+			if (spawnWeights.contains(biome.name))
+				biome.spawnWeight = spawnWeights[biome.name];
 		}
 	}
 }
@@ -818,8 +848,8 @@ const char* BiomeGenerator::StrFromBiomeType(BIOME_TYPE type)
 {
 	switch (type)
 	{
-	case BIOME_TYPE_OCEAN:	return "Ocean";
-	case BIOME_TYPE_LAND:	return "Land";
+	case BiomeGenerator::BIOME_TYPE_OCEAN:	return "Ocean";
+	case BiomeGenerator::BIOME_TYPE_LAND:	return "Land";
 	default:				return "Unknown";
 	}
 }
@@ -827,10 +857,9 @@ const char* BiomeGenerator::StrFromBiomeTemp(BIOME_TEMP temp)
 {
 	switch (temp)
 	{
-	case BIOME_TEMP_TEMPERATE:	return "Temperate";
-	case BIOME_TEMP_COLD:		return "Cold";
-	case BIOME_TEMP_WARM:		return "Warm";
+	case BiomeGenerator::BIOME_TEMP_TEMPERATE:	return "Temperate";
+	case BiomeGenerator::BIOME_TEMP_COLD:		return "Cold";
+	case BiomeGenerator::BIOME_TEMP_WARM:		return "Warm";
 	default:					return "Unknown";
 	}
 }
-

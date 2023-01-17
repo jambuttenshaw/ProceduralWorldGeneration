@@ -2,6 +2,7 @@
 
 #include "biomeHelper.hlsli"
 #include "math.hlsli"
+#include "noiseSimplex.hlsli"
 
 Texture2D heightmap : register(t0);
 Texture2D biomeMap : register(t1);
@@ -106,8 +107,11 @@ float4 main(InputType input) : SV_TARGET
     // biome colouring
     float3 groundColour;
     
+    float detailNoise = smoothstep(biomeTan.detailThreshold - s1, biomeTan.detailThreshold + s1, remap01(snoise(biomeTan.detailScale * (worldOffset + input.tex))));
+    float3 flatColour = lerp(biomeTan.flatDetailColour, biomeTan.flatColour, detailNoise);
+    
     float shoreMix = 1 - smoothstep(biomeTan.shoreHeight - s2, biomeTan.shoreHeight + s2, input.worldPosition.y);
-    groundColour = lerp(biomeTan.flatColour, biomeTan.shoreColour, shoreMix);
+    groundColour = lerp(flatColour, biomeTan.shoreColour, shoreMix);
     
     
     // calculate final ground colour
