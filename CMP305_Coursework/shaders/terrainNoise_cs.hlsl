@@ -32,7 +32,6 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float2 pos = uv + offset;
     
     uint2 biomeMapUV = GetBiomeMapLocation(pos, mappingBuffer);
-    float2 noisePos = mappingBuffer.topLeft + pos;
     float2 biomeBlending = GetBiomeBlend(pos, mappingBuffer);
    
     
@@ -40,7 +39,7 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     if (length(biomeBlending) == 0.0f)
     {
         int biome = asint(gBiomeMap.Load(uint3(biomeMapUV, 0)).r);
-        terrainHeight = TerrainNoise(noisePos, gGenerationSettingsBuffer[biome]);
+        terrainHeight = TerrainNoise(pos, gGenerationSettingsBuffer[biome]);
     }
     else
     {
@@ -49,10 +48,10 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         int b3 = asint(gBiomeMap.Load(uint3(biomeMapUV + uint2(0, sign(biomeBlending.y)), 0)).r);
         int b4 = asint(gBiomeMap.Load(uint3(biomeMapUV + uint2(sign(biomeBlending.x), sign(biomeBlending.y)), 0)).r);
         
-        float h1 = TerrainNoise(noisePos, gGenerationSettingsBuffer[b1]);
-        float h2 = b2 == b1 ? h1 : TerrainNoise(noisePos, gGenerationSettingsBuffer[b2]);
-        float h3 = b3 == b1 ? h1 : TerrainNoise(noisePos, gGenerationSettingsBuffer[b3]);
-        float h4 = b4 == b1 ? h1 : TerrainNoise(noisePos, gGenerationSettingsBuffer[b4]);
+        float h1 = TerrainNoise(pos, gGenerationSettingsBuffer[b1]);
+        float h2 = b2 == b1 ? h1 : TerrainNoise(pos, gGenerationSettingsBuffer[b2]);
+        float h3 = b3 == b1 ? h1 : TerrainNoise(pos, gGenerationSettingsBuffer[b3]);
+        float h4 = b4 == b1 ? h1 : TerrainNoise(pos, gGenerationSettingsBuffer[b4]);
         
         terrainHeight = lerp(
             lerp(h1, h3, abs(biomeBlending.y)),

@@ -305,6 +305,14 @@ void App1::gui()
 
 	if (ImGui::CollapsingHeader("Terrain"))
 	{
+		ImGui::Separator();
+
+		if (ImGui::InputInt("View Distance", &m_ViewSize, 2, 2))
+		{
+			if (m_ViewSize < 1) m_ViewSize = 1;
+			updateTerrainGOs();
+		}
+		ImGui::Separator();
 		regenerateTerrain |= m_BiomeGenerator->SettingsGUI();
 	}
 	ImGui::Separator();

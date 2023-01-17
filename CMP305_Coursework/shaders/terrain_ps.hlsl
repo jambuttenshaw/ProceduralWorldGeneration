@@ -107,7 +107,7 @@ float4 main(InputType input) : SV_TARGET
     // biome colouring
     float3 groundColour;
     
-    float detailNoise = smoothstep(biomeTan.detailThreshold - s1, biomeTan.detailThreshold + s1, remap01(snoise(worldOffset + (biomeTan.detailScale * input.tex))));
+    float detailNoise = smoothstep(biomeTan.detailThreshold - s1, biomeTan.detailThreshold + s1, remap01(snoise(2.0f * (worldOffset + input.tex))));
     float3 flatColour = lerp(biomeTan.flatDetailColour, biomeTan.flatColour, detailNoise);
     
     float shoreMix = 1 - smoothstep(biomeTan.shoreHeight - s2, biomeTan.shoreHeight + s2, input.worldPosition.y);

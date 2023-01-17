@@ -74,11 +74,10 @@ public:
 
 	struct BiomeMappingBufferType
 	{
-		XMFLOAT2 topleft;
-		float scale;
+		float pxPerTile;
 		unsigned int resolution;
 		float blending;
-		XMFLOAT3 padding;
+		float padding;
 	};
 
 	BiomeGenerator(ID3D11Device* device, unsigned int seed);
@@ -171,8 +170,7 @@ private:
 	ID3D11ShaderResourceView* m_BiomeTanView = nullptr;
 
 	ID3D11Buffer* m_BiomeMappingBuffer = nullptr;
-	XMFLOAT2 m_BiomeMapTopLeft{ 0, 0 };
-	float m_BiomeMapScale = 8.0f;
+	float m_BiomeMapPxPerTile = 8.0f;
 	float m_BiomeBlending = 0.5f;
 
 	XMFLOAT4 m_BiomeMinimapColours[MAX_BIOMES];

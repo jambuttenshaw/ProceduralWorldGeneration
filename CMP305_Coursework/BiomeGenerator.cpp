@@ -172,8 +172,7 @@ bool BiomeGenerator::SettingsGUI()
 
 		ImGui::Text("Biome map size: %d", m_BiomeMapSize);
 		ImGui::Text("Mapping:");
-		changed |= ImGui::DragFloat2("Top Left", &m_BiomeMapTopLeft.x, 0.01f);
-		changed |= ImGui::DragFloat("Scale", &m_BiomeMapScale, 0.01f);
+		changed |= ImGui::DragFloat("Pixels Per Tile", &m_BiomeMapPxPerTile, 0.01f);
 		changed |= ImGui::SliderFloat("Blending", &m_BiomeBlending, 0.0f, 1.0f);
 	
 		ImGui::Checkbox("Show Biome Map", &m_ShowBiomeMap);
@@ -249,8 +248,7 @@ nlohmann::json BiomeGenerator::Serialize() const
 {
 	nlohmann::json serialized;
 
-	serialized["biomeMapTopLeft"] = SerializationHelper::SerializeFloat2(m_BiomeMapTopLeft);
-	serialized["biomeMapScale"] = m_BiomeMapScale;
+	serialized["biomeMapPxPerTile"] = m_BiomeMapPxPerTile;
 	serialized["biomeBlending"] = m_BiomeBlending;
 
 	serialized["seed"] = m_Seed;
@@ -285,8 +283,7 @@ nlohmann::json BiomeGenerator::Serialize() const
 
 void BiomeGenerator::LoadFromJson(const nlohmann::json& data)
 {
-	if (data.contains("biomeMapTopLeft")) SerializationHelper::LoadFloat2FromJson(&m_BiomeMapTopLeft, data["biomeMapTopLeft"]);
-	if (data.contains("biomeMapScale")) m_BiomeMapScale = data["biomeMapScale"];
+	if (data.contains("biomeMapPxPerTile")) m_BiomeMapPxPerTile = data["biomeMapPxPerTile"];
 	if (data.contains("biomeBlending")) m_BiomeBlending = data["biomeBlending"];
 
 	if (data.contains("seed")) m_Seed = data["seed"];
@@ -747,11 +744,10 @@ void BiomeGenerator::CreateBiomeMappingBuffer(ID3D11Device* device)
 	bufferDesc.StructureByteStride = 0;
 
 	BiomeMappingBufferType bmbt{ 
-		m_BiomeMapTopLeft, 
-		m_BiomeMapScale, 
+		m_BiomeMapPxPerTile, 
 		static_cast<unsigned int>(m_BiomeMapSize),
 		m_BiomeBlending,
-		{ 0.0f, 0.0f, 0.0f }
+		0.0f
 	};
 	D3D11_SUBRESOURCE_DATA initialData;
 	initialData.pSysMem = &bmbt;
@@ -836,8 +832,7 @@ void BiomeGenerator::UpdateBuffers(ID3D11DeviceContext* deviceContext)
 	hr = deviceContext->Map(m_BiomeMappingBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	assert(hr == S_OK);
 	BiomeMappingBufferType* dataPtr = reinterpret_cast<BiomeMappingBufferType*>(mappedResource.pData);
-	dataPtr->topleft = m_BiomeMapTopLeft;
-	dataPtr->scale = m_BiomeMapScale;
+	dataPtr->pxPerTile = m_BiomeMapPxPerTile;
 	dataPtr->resolution = static_cast<unsigned int>(m_BiomeMapSize);
 	dataPtr->blending = m_BiomeBlending;
 	deviceContext->Unmap(m_BiomeMappingBuffer, 0);

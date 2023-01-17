@@ -69,7 +69,7 @@ private:
 	std::map<std::pair<int, int>, GameObject*> m_Terrains;
 
 	const float m_TileSize = 100.0f;
-	const int m_ViewSize = 3;
+	int m_ViewSize = 9;
 	std::map<std::pair<int, int>, Heightmap*> m_Heightmaps;
 
 	XMINT2 m_OldTile{ -1, -1 };

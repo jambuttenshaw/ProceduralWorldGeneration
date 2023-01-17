@@ -3,11 +3,10 @@
 
 struct BiomeMappingBuffer
 {
-    float2 topLeft;
-    float scale;
+    float pxPerTile;
     uint resolution;
     float blending;
-    float3 padding;
+    float padding;
 };
 
 struct BiomeTan
@@ -40,7 +39,7 @@ struct BiomeTan
 // returns uv of the entire biome map
 float2 GetBiomeMapUV(float2 pos, BiomeMappingBuffer mappingBuffer)
 {
-    return (pos - mappingBuffer.topLeft) / mappingBuffer.scale;
+    return pos * mappingBuffer.pxPerTile / mappingBuffer.resolution;
 }
 
 uint2 GetBiomeMapLocation(float2 pos, BiomeMappingBuffer mappingBuffer)
