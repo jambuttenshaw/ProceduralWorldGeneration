@@ -47,7 +47,7 @@ public:
 	WaterShader(ID3D11Device* device, ID3D11ShaderResourceView* normalMapA, ID3D11ShaderResourceView* normalMapB);
 	~WaterShader();
 
-	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& view, const XMMATRIX& projection, ID3D11ShaderResourceView* renderTextureColour, ID3D11ShaderResourceView* renderTextureDepth, Light* light, Camera* camera, float time, const BiomeGenerator* biomeGenerator);
+	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& view, const XMMATRIX& projection, ID3D11ShaderResourceView* renderTextureColour, ID3D11ShaderResourceView* renderTextureDepth, Light* light, Camera* camera, float time, const BiomeGenerator* biomeGenerator, const XMINT2& worldPos, int viewSize, float tileSize);
 
 	void SettingsGUI();
 
@@ -64,9 +64,6 @@ private:
 	ID3D11Buffer* m_WaterBuffer = nullptr;
 	ID3D11Buffer* m_LightBuffer = nullptr;
 	ID3D11SamplerState* m_NormalMapSamplerState = nullptr;
-
-	XMFLOAT3 m_OceanBoundsMin = { -50.0f, -10.0f, -50.0f };
-	XMFLOAT3 m_OceanBoundsMax = { 50.0f, 0.0f, 50.0f };
 
 	float m_DepthMultiplier = 0.2f;
 	float m_AlphaMultiplier = 0.2f;

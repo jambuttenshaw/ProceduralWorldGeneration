@@ -11,8 +11,9 @@ class BiomeMapShader : public BaseShader
 	struct BiomeColourBufferType
 	{
 		XMFLOAT4 biomeColours[MAX_BIOMES];
-		XMFLOAT2 worldMinPos;
-		XMFLOAT2 worldSize;
+		XMFLOAT2 worldPos;
+		int viewSize;
+		float padding;
 	};
 
 public:
@@ -20,7 +21,7 @@ public:
 	~BiomeMapShader();
 
 	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& world, const XMMATRIX& view, const XMMATRIX& projection, 
-		BiomeGenerator* biomeGenerator, const XMFLOAT2& worldMinPos, const XMFLOAT2& worldSize);
+		BiomeGenerator* biomeGenerator, const XMFLOAT2& worldPos, int viewSize);
 
 private:
 	void initShader(const wchar_t* vs, const wchar_t* ps);

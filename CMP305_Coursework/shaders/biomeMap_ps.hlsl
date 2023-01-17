@@ -6,8 +6,9 @@ SamplerState gSampler : register(s0);
 cbuffer BiomeColourBuffer : register(b0)
 {
     float4 biomeColours[MAX_BIOMES];
-    float2 worldMinPos;
-    float2 worldSize;
+    float2 worldPos;
+    int viewSize;
+    float padding;
 };
 cbuffer BiomeMappingBuffer : register(b1)
 {
@@ -29,8 +30,11 @@ float4 main(InputType input) : SV_TARGET
     // flip y axis makes it easier to understand
     float2 uv = float2(input.tex.x, 1.0f - input.tex.y);
     
+    float2 worldMinPos = worldPos - viewSize * 0.5f;
+    float2 worldMaxPos = worldPos + viewSize * 0.5f;
+    
     float2 worldMin = GetBiomeMapUV(worldMinPos, mappingBuffer);
-    float2 worldMax = GetBiomeMapUV(worldMinPos + worldSize, mappingBuffer);
+    float2 worldMax = GetBiomeMapUV(worldMaxPos, mappingBuffer);
     
     bool2 outerBounds = uv >= worldMin &&
                         uv <= worldMax;

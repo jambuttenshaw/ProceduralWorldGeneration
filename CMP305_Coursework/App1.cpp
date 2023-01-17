@@ -1,6 +1,8 @@
 #include "App1.h"
 
 #include <nlohmann/json.hpp>
+#include <set>
+#include <queue>
 
 #include "HeightmapFilter.h"
 #include "SerializationHelper.h"
@@ -32,26 +34,21 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	m_RenderTarget = new RenderTarget(renderer->getDevice(), screenWidth, screenHeight);
 
-	m_TerrainMesh = new TerrainMesh(renderer->getDevice());
+	m_TerrainMesh = new TerrainMesh(renderer->getDevice(), 128, m_TileSize);
 	m_Cube = new CubeMesh(renderer->getDevice(), renderer->getDeviceContext(), 2);
 	m_OrthoMesh = new OrthoMesh(renderer->getDevice(), renderer->getDeviceContext(), 200, 200, (screenWidth / 2) - 100, (screenHeight / 2) - 100);
 
-	camera->setPosition(-50.0f, 30.0f, -50.0f);
+	camera->setPosition(150.0f, 90.0f, 150.0f);
 	camera->setRotation(0.0f, 0.0f, 0.0f);
 
-	// create game objects
-	createTerrain({ 0.0f, 0.0f, 0.0f });
-	createTerrain({ 100.0f, 0.0f, 0.0f });
-	createTerrain({ 0.0f, 0.0f, 100.0f });
-	createTerrain({ 100.0f, 0.0f, 100.0f });
-	createTerrain({ 200.0f, 0.0f, 000.0f });
-	createTerrain({ 200.0f, 0.0f, 100.0f });
-	createTerrain({ 200.0f, 0.0f, 200.0f });
-	createTerrain({ 100.0f, 0.0f, 200.0f });
-	createTerrain({ 000.0f, 0.0f, 200.0f });
+	XMFLOAT3 cameraPos = camera->getPosition();
+	m_OldTile = {
+		static_cast<int>(floor(cameraPos.x / m_TileSize)),
+		static_cast<int>(floor(cameraPos.z / m_TileSize))
+	};
 
-	m_WorldMinPos = { 0, 0 };
-	m_WorldSize = { 3, 3 };
+	// create game objects
+	updateTerrainGOs();
 
 	// Initialise light
 	light = new Light();
@@ -68,7 +65,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	{
 		loadSettings(std::string(m_SaveFilePath));
 		m_BiomeGenerator->GenerateBiomeMap(renderer->getDevice());
-		applyFilterStack();
+		regenerateAllHeightmaps();
 	}
 }
 
@@ -88,7 +85,7 @@ App1::~App1()
 	if (m_HeightmapFilter) delete m_HeightmapFilter;
 
 	for (auto heightmap : m_Heightmaps)
-		delete heightmap;
+		delete heightmap.second;
 }
 
 
@@ -103,6 +100,20 @@ bool App1::frame()
 	}
 	
 	m_Time += timer->getTime();
+
+
+	// update the loaded terrains
+	XMFLOAT3 cameraPos = camera->getPosition();
+	XMINT2 worldTile = {
+		static_cast<int>(floor(cameraPos.x / m_TileSize)),
+		static_cast<int>(floor(cameraPos.z / m_TileSize))
+	};
+	if (worldTile.x != m_OldTile.x || worldTile.y != m_OldTile.y)
+	{
+		updateTerrainGOs();
+	}
+	m_OldTile = worldTile;
+
 
 	// Render the graphics.
 	result = render();
@@ -145,7 +156,10 @@ bool App1::render()
 		XMMATRIX orthoViewMatrix = camera->getOrthoViewMatrix();
 		XMMATRIX orthoMatrix = renderer->getOrthoMatrix();
 
-		m_BiomeMapShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, m_BiomeGenerator, m_WorldMinPos, m_WorldSize);
+		XMFLOAT3 cameraPos = camera->getPosition();
+		XMFLOAT2 worldTile = { floor(cameraPos.x / m_TileSize), floor(cameraPos.z / m_TileSize) };
+
+		m_BiomeMapShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, m_BiomeGenerator, worldTile, m_ViewSize);
 		m_BiomeMapShader->render(renderer->getDeviceContext(), m_OrthoMesh->getIndexCount());
 	}
 	renderer->setZBuffer(true);
@@ -181,18 +195,27 @@ void App1::worldPass()
 	int goIndex = 0;
 	for (auto& go : m_GameObjects)
 	{
-		XMMATRIX w = worldMatrix * go.transform.GetMatrix();
-		switch (go.meshType)
+		XMMATRIX w = worldMatrix * go->transform.GetMatrix();
+		switch (go->meshType)
 		{
 		case GameObject::MeshType::Regular:
-			go.mesh.regular->sendData(renderer->getDeviceContext());
+		{
+			go->mesh.regular->sendData(renderer->getDeviceContext());
 			m_LightShader->setShaderParameters(renderer->getDeviceContext(), w, viewMatrix, projectionMatrix, light);
-			m_LightShader->render(renderer->getDeviceContext(), go.mesh.regular->getIndexCount());
+			m_LightShader->render(renderer->getDeviceContext(), go->mesh.regular->getIndexCount());
 			break;
+		}
 		case GameObject::MeshType::Terrain:
-			go.mesh.terrain->SendData(renderer->getDeviceContext());
-			m_TerrainShader->SetShaderParameters(renderer->getDeviceContext(), w, viewMatrix, projectionMatrix, m_GOToHeightmap.at(goIndex), m_BiomeGenerator, light);
-			m_TerrainShader->Render(renderer->getDeviceContext(), go.mesh.terrain->GetIndexCount());
+		{
+			// calculate heightmap index
+			int x = static_cast<int>(floor(go->transform.GetTranslation().x / go->mesh.terrain->GetSize()));
+			int y = static_cast<int>(floor(go->transform.GetTranslation().z / go->mesh.terrain->GetSize()));
+
+			go->mesh.terrain->SendData(renderer->getDeviceContext());
+			m_TerrainShader->SetShaderParameters(renderer->getDeviceContext(), w, viewMatrix, projectionMatrix, m_Heightmaps.at({ x, y }), m_BiomeGenerator, light);
+			m_TerrainShader->Render(renderer->getDeviceContext(), go->mesh.terrain->GetIndexCount());
+			break;
+		}
 		}
 		goIndex++;
 	}
@@ -208,7 +231,10 @@ void App1::waterPass()
 	{
 
 		renderer->setZBuffer(false);
-		m_WaterShader->setShaderParameters(renderer->getDeviceContext(), viewMatrix, projectionMatrix, m_RenderTarget->GetColourSRV(), m_RenderTarget->GetDepthSRV(), light, camera, m_Time, m_BiomeGenerator);
+		m_WaterShader->setShaderParameters(renderer->getDeviceContext(), viewMatrix, projectionMatrix,
+			m_RenderTarget->GetColourSRV(), m_RenderTarget->GetDepthSRV(),
+			light, camera, m_Time, m_BiomeGenerator,
+			m_OldTile, m_ViewSize, m_TileSize);
 		m_WaterShader->Render(renderer->getDeviceContext());
 		renderer->setZBuffer(true);
 	}
@@ -277,23 +303,6 @@ void App1::gui()
 	}
 	ImGui::Separator();
 
-	if (ImGui::CollapsingHeader("GameObjects"))
-	{
-		int i = 0;
-		for (auto& go : m_GameObjects)
-		{
-			if (ImGui::TreeNode((void*)(intptr_t)(i), "Game Object %d", i))
-			{
-				go.SettingsGUI();
-				ImGui::Separator();
-
-				ImGui::TreePop();
-			}
-			i++;
-		}
-	}
-	ImGui::Separator();
-
 	if (ImGui::CollapsingHeader("Terrain"))
 	{
 		regenerateTerrain |= m_BiomeGenerator->SettingsGUI();
@@ -301,29 +310,136 @@ void App1::gui()
 	ImGui::Separator();
 
 	if (regenerateTerrain)
-		applyFilterStack();
+		regenerateAllHeightmaps();
 }
 
-void App1::applyFilterStack()
+void App1::regenerateAllHeightmaps()
 {
 	m_BiomeGenerator->UpdateBuffers(renderer->getDeviceContext());
 	for (auto heightmap : m_Heightmaps)
-	{
-		if (m_HeightmapFilter)
-			m_HeightmapFilter->Run(renderer->getDeviceContext(), heightmap, m_BiomeGenerator);
-	}
+		regenerateHeightmap(heightmap.second);
 }
 
-void App1::createTerrain(const XMFLOAT3& pos)
+void App1::regenerateHeightmap(Heightmap* heightmap)
 {
-	m_GameObjects.push_back({ m_TerrainMesh, pos });
+	if (m_HeightmapFilter)
+		m_HeightmapFilter->Run(renderer->getDeviceContext(), heightmap, m_BiomeGenerator);
+}
 
-	Heightmap* newHeightmap = new Heightmap(renderer->getDevice(), 1024);
-	newHeightmap->SetOffset({ pos.x / m_TerrainMesh->GetSize(), pos.z / m_TerrainMesh->GetSize() });
+void App1::updateTerrainGOs()
+{
+	// work out which tile the player is located in
+	XMFLOAT3 cameraPos = camera->getPosition();
+	XMFLOAT2 worldTile = { floor(cameraPos.x / m_TileSize), floor(cameraPos.z / m_TileSize) };
+	XMINT2 worldTileInt = { static_cast<int>(worldTile.x), static_cast<int>(worldTile.y) };
 
-	m_Heightmaps.push_back(newHeightmap);
+	// get all of the tiles within view of the player
+	std::set<std::pair<int, int>> tilesInView;
+	for (int i = 0; i < m_ViewSize; i++)
+	for (int j = 0; j < m_ViewSize; j++)
+	{
+		XMINT2 tile{
+			worldTileInt.x - (m_ViewSize / 2) + i,
+			worldTileInt.y - (m_ViewSize / 2) + j,
+		};
 
-	m_GOToHeightmap.insert({ m_GameObjects.size() - 1, newHeightmap });
+		// make sure this tile is in bounds
+		if (tile.x >= 0 && tile.y >= 0)
+			tilesInView.insert({ tile.x, tile.y });
+	}
+
+	// identify any terrains that are out of view
+	std::queue<std::pair<int, int>> tilesToDelete;
+	for (auto& heightmap : m_Heightmaps)
+	{
+		if (tilesInView.find(heightmap.first) == tilesInView.end())
+			tilesToDelete.push(heightmap.first);
+	}
+
+	// identify any new terrains that need to be created
+	std::queue<std::pair<int, int>> tilesToCreate;
+	for (auto& tile : tilesInView)
+	{
+		if (m_Heightmaps.find(tile) == m_Heightmaps.end())
+			tilesToCreate.push(tile);
+	}
+
+	// repurpose as many old terrains as possible
+	// create new ones where required
+	while (!tilesToCreate.empty())
+	{
+		auto& tile = tilesToCreate.front();
+
+		if (tilesToDelete.empty())
+		{
+			XMFLOAT3 pos{ tile.first * m_TileSize, 0.0f, tile.second * m_TileSize };
+			GameObject* newGO = new GameObject{ m_TerrainMesh, pos };
+			m_GameObjects.push_back(newGO);
+			m_Terrains.insert({ tile, m_GameObjects.back() });
+
+			Heightmap* newHeightmap = new Heightmap(renderer->getDevice(), 1024);
+			newHeightmap->SetOffset({
+				static_cast<float>(tile.first),
+				static_cast<float>(tile.second)
+				});
+			regenerateHeightmap(newHeightmap);
+
+			m_Heightmaps.insert({ tile, newHeightmap });
+		}
+		else
+		{
+			auto& oldTile = tilesToDelete.front();
+
+			// repurpose a terrain that is going to be deleted
+			XMFLOAT3 pos{ tile.first * m_TileSize, 0.0f, tile.second * m_TileSize };
+
+			GameObject* go = m_Terrains.at(oldTile);
+			Heightmap* heightmap = m_Heightmaps.at(oldTile);
+
+			go->transform.SetTranslation(pos);
+			heightmap->SetOffset({ 
+				static_cast<float>(tile.first),
+				static_cast<float>(tile.second) 
+				});
+			regenerateHeightmap(heightmap);
+
+			m_Terrains.erase(oldTile);
+			m_Terrains.insert({ tile, go });
+
+			m_Heightmaps.erase(oldTile);
+			m_Heightmaps.insert({ tile, heightmap });
+
+			tilesToDelete.pop();
+		}
+
+		tilesToCreate.pop();
+	}
+
+	// delete any left over terrains
+	while (!tilesToDelete.empty())
+	{
+		// delete tile
+		auto& tile = tilesToDelete.front();
+
+		// delete heightmap
+		delete m_Heightmaps.at(tile);
+		m_Heightmaps.erase(tile);
+
+		// delete terrain
+		GameObject* goToDelete = m_Terrains.at(tile);
+		for (auto it = m_GameObjects.begin(); it != m_GameObjects.end(); it++)
+		{
+			if (*it == goToDelete)
+			{
+				delete goToDelete;
+				m_GameObjects.erase(it);
+				break;
+			}
+		}
+		m_Terrains.erase(tile);
+
+		tilesToDelete.pop();
+	}
 }
 
 
@@ -338,6 +454,9 @@ void App1::saveSettings(const std::string& file)
 	serialized["lightDiffuse"] = SerializationHelper::SerializeFloat3(lightDiffuse);
 	serialized["lightAmbient"] = SerializationHelper::SerializeFloat3(lightAmbient);
 	serialized["lightSpecular"] = SerializationHelper::SerializeFloat3(lightSpecular);
+
+	// camera
+	serialized["cameraPos"] = SerializationHelper::SerializeFloat3(camera->getPosition());
 
 	serialized["waterSettings"] = m_WaterShader->Serialize();
 
@@ -368,6 +487,14 @@ void App1::loadSettings(const std::string& file)
 	light->setAmbientColour(lightAmbient.x, lightAmbient.y, lightAmbient.z, 1.0f);
 	light->setSpecularColour(lightSpecular.x, lightSpecular.y, lightSpecular.z, 1.0f);
 	light->setDirection(lightDir.x, lightDir.y, lightDir.z);
+
+	if (data.contains("cameraPos"))
+	{
+		XMFLOAT3 cameraPos;
+		SerializationHelper::LoadFloat3FromJson(&cameraPos, data["cameraPos"]);
+		camera->setPosition(cameraPos.x, cameraPos.y, cameraPos.z);
+	}
+
 
 	if (data.contains("waterSettings")) m_WaterShader->LoadFromJson(data["waterSettings"]);
 }

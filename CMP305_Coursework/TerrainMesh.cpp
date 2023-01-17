@@ -50,12 +50,12 @@ void TerrainMesh::BuildMesh(ID3D11Device* device, unsigned int resolution, float
 	{
 		for (unsigned int z = 0; z < resolution + 1; z++)
 		{
-			float fX = static_cast<float>(x) / fResolution - 0.5f;
-			float fZ = static_cast<float>(z) / fResolution - 0.5f;
+			float fX = static_cast<float>(x) / fResolution;
+			float fZ = static_cast<float>(z) / fResolution;
 
 			VertexType v;
 			v.Position = { size * fX, 0.0f, size * fZ };
-			v.UV = { fX + 0.5f, fZ + 0.5f };
+			v.UV = { fX, fZ };
 			v.Normal = { 0.0f, 1.0f, 0.0f };
 
 			vertices[x + z * (resolution + 1)] = v;

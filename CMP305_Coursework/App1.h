@@ -38,13 +38,14 @@ protected:
 	bool render();
 	void gui();
 
-	// passes
+	// render passes
 	void worldPass();
 	void waterPass();
 
-	void applyFilterStack();
+	void regenerateAllHeightmaps();
+	void regenerateHeightmap(Heightmap* heightmap);
 
-	void createTerrain(const XMFLOAT3& pos);
+	void updateTerrainGOs();
 
 	void saveSettings(const std::string& file);
 	void loadSettings(const std::string& file);
@@ -64,12 +65,14 @@ private:
 	// for debug display of textures
 	OrthoMesh* m_OrthoMesh = nullptr;
 
-	std::vector<GameObject> m_GameObjects;
-	XMFLOAT2 m_WorldMinPos{ 0, 0 };
-	XMFLOAT2 m_WorldSize{ 0, 0 };
+	std::vector<GameObject*> m_GameObjects;
+	std::map<std::pair<int, int>, GameObject*> m_Terrains;
 
-	std::vector<Heightmap*> m_Heightmaps;
-	std::map<size_t, Heightmap*> m_GOToHeightmap;
+	const float m_TileSize = 100.0f;
+	const int m_ViewSize = 3;
+	std::map<std::pair<int, int>, Heightmap*> m_Heightmaps;
+
+	XMINT2 m_OldTile{ -1, -1 };
 	
 	Light* light;
 	XMFLOAT3 lightDiffuse{ 1.0f, 1.0f, 1.0f };

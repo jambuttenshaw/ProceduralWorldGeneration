@@ -73,7 +73,7 @@ void WaterShader::UnbindShaderResources(ID3D11DeviceContext* deviceContext)
 	deviceContext->PSSetSamplers(0, 1, &nullSampler);
 }
 
-void WaterShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& viewMatrix, const XMMATRIX& projectionMatrix, ID3D11ShaderResourceView* renderTextureColour, ID3D11ShaderResourceView* renderTextureDepth, Light* light, Camera* camera, float time, const BiomeGenerator* biomeGenerator)
+void WaterShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& viewMatrix, const XMMATRIX& projectionMatrix, ID3D11ShaderResourceView* renderTextureColour, ID3D11ShaderResourceView* renderTextureDepth, Light* light, Camera* camera, float time, const BiomeGenerator* biomeGenerator, const XMINT2& worldPos, int viewSize, float tileSize)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -96,8 +96,10 @@ void WaterShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const 
 	dataPtr->projection = tproj;
 	dataPtr->cameraPos = camera->getPosition();
 
-	dataPtr->oceanBoundsMin = m_OceanBoundsMin;
-	dataPtr->oceanBoundsMax = m_OceanBoundsMax;
+	//dataPtr->oceanBoundsMin = { tileSize * (0.5f * viewSize - worldPos.x),   0.0f, tileSize * (0.5f * viewSize - worldPos.y) };
+	//dataPtr->oceanBoundsMax = { tileSize * (0.5f * viewSize + worldPos.x), -10.0f, tileSize * (0.5f * viewSize + worldPos.y) };
+	dataPtr->oceanBoundsMin = { tileSize * (worldPos.x - 0.5f * (viewSize - 1)),   0.0f, tileSize * (worldPos.y - 0.5f * (viewSize - 1)) };
+	dataPtr->oceanBoundsMax = { tileSize * (worldPos.x + 0.5f * (viewSize + 1)), -10.0f, tileSize * (worldPos.y + 0.5f * (viewSize + 1)) };
 
 	dataPtr->depthMultiplier = m_DepthMultiplier;
 	dataPtr->alphaMultiplier = m_AlphaMultiplier;
@@ -139,8 +141,6 @@ void WaterShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const 
 
 void WaterShader::SettingsGUI()
 {
-	ImGui::DragFloat3("Ocean Bounds Min", &m_OceanBoundsMin.x, 0.1f);
-	ImGui::DragFloat3("Ocean Bounds Max", &m_OceanBoundsMax.x, 0.1f);
 	ImGui::SliderFloat("Depth Multiplier", &m_DepthMultiplier, 0.05f, 1.0f);
 	ImGui::SliderFloat("Alpha Multiplier", &m_AlphaMultiplier, 0.05f, 1.0f);
 	ImGui::SliderFloat("Normal Map Strength", &m_NormalMapStrength, 0.0f, 1.0f);
@@ -151,9 +151,6 @@ void WaterShader::SettingsGUI()
 nlohmann::json WaterShader::Serialize() const
 {
 	nlohmann::json serialized;
-
-	serialized["oceanBoundsMin"] = SerializationHelper::SerializeFloat3(m_OceanBoundsMin);
-	serialized["oceanBoundsMax"] = SerializationHelper::SerializeFloat3(m_OceanBoundsMax);
 
 	serialized["depthMultiplier"] = m_DepthMultiplier;
 	serialized["alphaMultiplier"] = m_AlphaMultiplier;
@@ -167,9 +164,6 @@ nlohmann::json WaterShader::Serialize() const
 
 void WaterShader::LoadFromJson(const nlohmann::json& data)
 {
-	if (data.contains("oceanBoundsMin")) SerializationHelper::LoadFloat3FromJson(&m_OceanBoundsMin, data["oceanBoundsMin"]);
-	if (data.contains("oceanBoundsMax")) SerializationHelper::LoadFloat3FromJson(&m_OceanBoundsMax, data["oceanBoundsMax"]);
-
 	if (data.contains("depthMultiplier")) m_DepthMultiplier = data["depthMultiplier"];
 	if (data.contains("alphaMultiplier")) m_AlphaMultiplier = data["alphaMultiplier"];
 

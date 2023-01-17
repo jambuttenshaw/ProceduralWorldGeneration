@@ -54,7 +54,7 @@ void BiomeMapShader::initShader(const wchar_t* vsFilename, const wchar_t* psFile
 
 
 void BiomeMapShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX& worldMatrix, const XMMATRIX& viewMatrix, const XMMATRIX& projectionMatrix, 
-	BiomeGenerator* biomeGenerator, const XMFLOAT2& worldMinPos, const XMFLOAT2& worldSize)
+	BiomeGenerator* biomeGenerator, const XMFLOAT2& worldPos, int viewSize)
 {
 	{
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -72,8 +72,8 @@ void BiomeMapShader::setShaderParameters(ID3D11DeviceContext* deviceContext, con
 		assert(hr == S_OK);
 		BiomeColourBufferType* dataPtr = (BiomeColourBufferType*)mappedResource.pData;
 		memcpy(dataPtr->biomeColours, biomeGenerator->GetBiomeMinimapColours(), sizeof(XMFLOAT4) * MAX_BIOMES);
-		dataPtr->worldMinPos = worldMinPos;
-		dataPtr->worldSize = worldSize;
+		dataPtr->worldPos = worldPos;
+		dataPtr->viewSize = viewSize;
 		deviceContext->Unmap(m_BiomeColourBuffer, 0);
 	}
 
