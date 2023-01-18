@@ -72,7 +72,6 @@ bool RidgeNoiseSettings::SettingsGUI()
 	ImGui::Text("Ridge Settings");
 	changed |= ImGui::DragFloat("Power", &Power, 0.01f);
 	changed |= ImGui::DragFloat("Gain", &Gain, 0.01f);
-	changed |= ImGui::DragFloat("Peak Smoothing", &PeakSmoothing, 0.01f);
 	changed |= ImGui::DragFloat("Ridge Threshold", &RidgeThreshold, 0.01f);
 
 	return changed;
@@ -93,7 +92,6 @@ nlohmann::json RidgeNoiseSettings::Serialize() const
 
 	serialized["power"] = Power;
 	serialized["gain"] = Gain;
-	serialized["peakSmoothing"] = PeakSmoothing;
 	serialized["ridgeThreshold"] = RidgeThreshold;
 
 	return serialized;
@@ -112,7 +110,6 @@ void RidgeNoiseSettings::LoadFromJson(const nlohmann::json& data)
 
 	if (data.contains("power")) Power = data["power"];
 	if (data.contains("gain")) Gain = data["gain"];
-	if (data.contains("peakSmoothing")) PeakSmoothing = data["peakSmoothing"];
 	if (data.contains("ridgeThreshold")) RidgeThreshold = data["ridgeThreshold"];
 }
 

@@ -148,7 +148,7 @@ private:
 	int m_ContinentChance = 15;
 	int m_IslandExpandChance = 30;
 	int m_IslandErodeChance = 15;
-	int m_RemoveTooMuchOceanChance = 45;
+	int m_SmallIslandsChance = 45;
 	int m_ZoomSamplePerturbation = 15;
 
 	int m_TemperateBiomeChance = 66;

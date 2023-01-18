@@ -33,7 +33,7 @@ bool BiomeGenerator::BiomeTan::SettingsGUI()
 	changed |= ImGui::SliderFloat("Flat threshold", &flatThreshold, 0.0f, cliffThreshold);
 	changed |= ImGui::SliderFloat("Cliff threshold", &cliffThreshold, flatThreshold, 1.0f);
 	changed |= ImGui::DragFloat("Shore Height", &shoreHeight, 0.005f);
-	changed |= ImGui::SliderFloat("Threshold", &detailThreshold, 0.0f, 1.0f);
+	changed |= ImGui::SliderFloat("Detail Threshold", &detailThreshold, 0.0f, 1.0f);
 	ImGui::Text("Snow");
 	changed |= ImGui::DragFloat("Snow Height", &snowHeight, 0.005f);
 	changed |= ImGui::SliderFloat("Snow Steepness", &snowSteepness, 0.0f, 1.0f);
@@ -181,13 +181,12 @@ bool BiomeGenerator::SettingsGUI()
 		ImGui::Separator();
 
 		// these values don't modify 'changed' as they don't affect world generation, only biome generation
-		ImGui::Text("World Generation");
 		ImGui::InputInt("Seed", (int*)(&m_Seed));
 		ImGui::Text("Generation Probabilities:");
 		ImGui::SliderInt("Continent", &m_ContinentChance, 0, 100);
 		ImGui::SliderInt("Island Expand", &m_IslandExpandChance, 0, 100);
 		ImGui::SliderInt("Island Erode", &m_IslandErodeChance, 0, 100);
-		ImGui::SliderInt("Remove Ocean", &m_RemoveTooMuchOceanChance, 0, 100);
+		ImGui::SliderInt("Small Islands", &m_SmallIslandsChance, 0, 100);
 		ImGui::SliderInt("Zooming Perturbations", &m_ZoomSamplePerturbation, 0, 100);
 		ImGui::DragInt("Cold Biome", &m_ColdBiomeChance, 0.1f);
 		ImGui::DragInt("Temperate Biome", &m_TemperateBiomeChance, 0.1f);
@@ -250,7 +249,7 @@ nlohmann::json BiomeGenerator::Serialize() const
 	serialized["continentChance"] = m_ContinentChance;
 	serialized["islandExpandChance"] = m_IslandExpandChance;
 	serialized["islandErodeChance"] = m_IslandErodeChance;
-	serialized["removeOceanChance"] = m_RemoveTooMuchOceanChance;
+	serialized["removeOceanChance"] = m_SmallIslandsChance;
 	serialized["zoomingPerturbationChance"] = m_ZoomSamplePerturbation;
 
 	serialized["temperateChance"] = m_TemperateBiomeChance;
@@ -285,7 +284,7 @@ void BiomeGenerator::LoadFromJson(const nlohmann::json& data)
 	if (data.contains("continentChance")) m_ContinentChance = data["continentChance"];
 	if (data.contains("islandExpandChance")) m_IslandExpandChance = data["islandExpandChance"];
 	if (data.contains("islandErodeChance")) m_IslandErodeChance = data["islandErodeChance"];
-	if (data.contains("removeOceanChance")) m_RemoveTooMuchOceanChance = data["removeOceanChance"];
+	if (data.contains("removeOceanChance")) m_SmallIslandsChance = data["removeOceanChance"];
 	if (data.contains("zoomingPerturbationChance")) m_ZoomSamplePerturbation = data["zoomingPerturbationChance"];
 
 	if (data.contains("temperateChance")) m_TemperateBiomeChance = data["temperateChance"];
@@ -451,7 +450,7 @@ void BiomeGenerator::RemoveTooMuchOcean(int** biomeMapPtr, size_t mapSize)
 
 			if (CountNeighboursEqual(x, y, BIOME_TYPE_OCEAN, biomeMap, mapSize) == 8)
 			{
-				if (Chance(m_RemoveTooMuchOceanChance))
+				if (Chance(m_SmallIslandsChance))
 					sample = BIOME_TYPE_LAND;
 			}
 

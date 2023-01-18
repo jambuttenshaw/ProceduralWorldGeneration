@@ -15,7 +15,7 @@ App1::App1()
 	m_TerrainMesh = nullptr;
 	m_TerrainShader = nullptr;
 
-	strcpy_s(m_SaveFilePath, "res/settings/alien.json");
+	strcpy_s(m_SaveFilePath, "res/settings/earth.json");
 }
 
 void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, Input *in, bool VSYNC, bool FULL_SCREEN)
@@ -173,7 +173,9 @@ bool App1::render()
 	renderer->getDeviceContext()->DSSetShader(NULL, NULL, 0);
 
 	// Build GUI
+	ImGui::Begin("Settings");
 	gui();
+	ImGui::End();
 
 	// Render UI
 	ImGui::Render();

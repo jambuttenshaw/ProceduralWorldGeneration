@@ -24,10 +24,9 @@ struct RidgeNoiseSettings
     float2 offset;
     float power;
     float gain;
-    float peakSmoothing;
     float ridgeThreshold;
     
-    float padding;
+    float2 padding;
 };
 
 struct MountainNoiseSettings
@@ -102,23 +101,6 @@ float RidgeNoise(float2 pos, RidgeNoiseSettings settings)
     return noiseSum * settings.elevation;
 }
 
-
-float SmoothedRidgeNoise(float2 pos, RidgeNoiseSettings settings)
-{
-    float offset = settings.peakSmoothing * 0.01f;
-    
-    float sample0 = RidgeNoise(pos, settings);
-    float sample1 = RidgeNoise(pos + float2(offset, 0.0f), settings);
-    float sample2 = RidgeNoise(pos + float2(0.0f, offset), settings);
-    float sample3 = RidgeNoise(pos - float2(offset, 0.0f), settings);
-    float sample4 = RidgeNoise(pos - float2(0.0f, offset), settings);
-    float sample5 = RidgeNoise(pos + float2(offset, offset), settings);
-    float sample6 = RidgeNoise(pos + float2(-offset, offset), settings);
-    float sample7 = RidgeNoise(pos - float2(offset, offset), settings);
-    float sample8 = RidgeNoise(pos - float2(-offset, offset), settings);
-    
-    return (sample0 + sample1 + sample2 + sample3 + sample4 + sample5 + sample6 + sample7 + sample8) / 9.0f;
-}
 
 float MountainNoise(float2 pos, MountainNoiseSettings settings)
 {

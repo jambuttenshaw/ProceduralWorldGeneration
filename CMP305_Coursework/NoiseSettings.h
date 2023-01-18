@@ -53,10 +53,9 @@ struct RidgeNoiseSettings
 	XMFLOAT2 Offset{ 0.0f, 0.0f };
 	float Power = 5.0f;
 	float Gain = 7.0f;
-	float PeakSmoothing = 0.0f;
 	float RidgeThreshold = 2.0f;
 
-	float Padding = 0.0f;
+	XMFLOAT2 Padding{ 0.0f, 0.0f };
 
 	bool SettingsGUI();
 	nlohmann::json Serialize() const;
@@ -73,7 +72,7 @@ struct TerrainNoiseSettings
 	float OceanDepthMultiplier = 0.0f;
 	float OceanFloorDepth = 3.0f;
 	float OceanFloorSmoothing = 0.5f;
-	float Padding = 0;
+	float Padding = 0.0f;
 
 	bool SettingsGUI();
 	nlohmann::json Serialize() const;
