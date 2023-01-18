@@ -355,24 +355,24 @@ void BiomeGenerator::GenerateBiomeMap(ID3D11Device* device)
 	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
 	AddIslandsCA(&m_BiomeMap, m_BiomeMapSize);
 	RemoveTooMuchOcean(&m_BiomeMap, m_BiomeMapSize);
-
+	
 	// decide on biome temperatures
 	size_t tempMapSize = m_BiomeMapSize;
 	int* tempMap = new int[tempMapSize * tempMapSize];
 	CreateTemperatures(&tempMap, m_BiomeMap, tempMapSize);
-
+	
 	Zoom2x(&m_BiomeMap, &m_BiomeMapSize);
 	Zoom2x(&tempMap, &tempMapSize);
-
+	
 	TransitionTemperatures(&tempMap, tempMapSize);
-
+	
 	// now select biomes based off of the temperatures
 	SelectBiomes(&m_BiomeMap, tempMap, m_BiomeMapSize);
 	// temp map is no longer needed (temperatures have been assigned into biomes)
 	delete[] tempMap;
-
+	
 	Zoom2x(&m_BiomeMap, &m_BiomeMapSize);
-
+	
 	AddShores(&m_BiomeMap, m_BiomeMapSize);
 
 	CreateBiomeMapTexture(device);

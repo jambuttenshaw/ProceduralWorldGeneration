@@ -42,6 +42,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	camera->setRotation(0.0f, 0.0f, 0.0f);
 
 	XMFLOAT3 cameraPos = camera->getPosition();
+	// old tile is used to find when the camera crosses tile boundaries
 	m_OldTile = {
 		static_cast<int>(floor(cameraPos.x / m_TileSize)),
 		static_cast<int>(floor(cameraPos.z / m_TileSize))
@@ -58,7 +59,6 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	light->setDirection(lightDir.x, lightDir.y, lightDir.z);
 
 	m_BiomeGenerator = new BiomeGenerator(renderer->getDevice(), 1);
-	m_BiomeGenerator->GenerateBiomeMap(renderer->getDevice());
 	m_HeightmapFilter = new HeightmapFilter(renderer->getDevice(), L"terrainNoise_cs.cso");
 
 	if (m_LoadOnOpen)
@@ -72,7 +72,6 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 App1::~App1()
 {
-	// probably not the best place to put this...
 	if (m_SaveOnExit) saveSettings(std::string(m_SaveFilePath));
 
 
@@ -140,6 +139,7 @@ bool App1::render()
 	if (!wireframeToggle) m_RenderTarget->Set(renderer->getDeviceContext());
 	worldPass();
 
+	renderer->setZBuffer(false);
 	if (!wireframeToggle)
 	{
 		// water is a post-processing effect and rendered afterwards
@@ -148,7 +148,6 @@ bool App1::render()
 		waterPass();
 	}
 
-	renderer->setZBuffer(false);
 	if (m_BiomeGenerator->ShowBiomeMap())
 	{
 		m_OrthoMesh->sendData(renderer->getDeviceContext());
@@ -194,8 +193,6 @@ void App1::worldPass()
 	XMMATRIX viewMatrix = camera->getViewMatrix();
 	XMMATRIX projectionMatrix = renderer->getProjectionMatrix();
 
-
-	int goIndex = 0;
 	for (auto& go : m_GameObjects)
 	{
 		XMMATRIX w = worldMatrix * go->transform.GetMatrix();
@@ -220,7 +217,6 @@ void App1::worldPass()
 			break;
 		}
 		}
-		goIndex++;
 	}
 }
 
@@ -231,16 +227,11 @@ void App1::waterPass()
 	XMMATRIX viewMatrix = camera->getViewMatrix();
 	XMMATRIX projectionMatrix = renderer->getProjectionMatrix();
 
-	{
-
-		renderer->setZBuffer(false);
-		m_WaterShader->setShaderParameters(renderer->getDeviceContext(), viewMatrix, projectionMatrix,
-			m_RenderTarget->GetColourSRV(), m_RenderTarget->GetDepthSRV(),
-			light, camera, m_Time, m_BiomeGenerator,
-			m_OldTile, m_ViewSize, m_TileSize);
-		m_WaterShader->Render(renderer->getDeviceContext());
-		renderer->setZBuffer(true);
-	}
+	m_WaterShader->setShaderParameters(renderer->getDeviceContext(), viewMatrix, projectionMatrix,
+		m_RenderTarget->GetColourSRV(), m_RenderTarget->GetDepthSRV(),
+		light, camera, m_Time, m_BiomeGenerator,
+		m_OldTile, m_ViewSize, m_TileSize);
+	m_WaterShader->Render(renderer->getDeviceContext());
 }
 
 void App1::gui()
@@ -424,6 +415,8 @@ void App1::updateTerrainGOs()
 
 		if (tilesToDelete.empty())
 		{
+			// no terrains available to repurpose, create a new one
+
 			XMFLOAT3 pos{ tile.first * m_TileSize, 0.0f, tile.second * m_TileSize };
 			GameObject* newGO = new GameObject{ m_TerrainMesh, pos };
 			m_GameObjects.push_back(newGO);
@@ -440,9 +433,9 @@ void App1::updateTerrainGOs()
 		}
 		else
 		{
+			// repurpose a terrain that is going to be deleted
 			auto& oldTile = tilesToDelete.front();
 
-			// repurpose a terrain that is going to be deleted
 			XMFLOAT3 pos{ tile.first * m_TileSize, 0.0f, tile.second * m_TileSize };
 
 			GameObject* go = m_Terrains.at(oldTile);
