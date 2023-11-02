@@ -13,7 +13,7 @@ System::System(BaseApplication* application, int screenWidth, int screenHeight, 
 	initialiseWindows(screenWidth, screenHeight);
 
 	RECT rect;
-	GetClientRect(hwnd, &rect);
+	GetWindowRect(hwnd, &rect);
 
 	app = application;
 	app->init(hinstance, hwnd, rect.right, rect.bottom, &input, VSYNC, FULL_SCREEN);
